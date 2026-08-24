@@ -14,12 +14,13 @@ import { mockFnoOffer } from '@/services/kyc/mockKycData';
  * @param {boolean} open
  * @param {Function} onActivate  — user chose "Activate F&O"
  * @param {Function} onSkip      — user chose "Do it later"
+ * @param {Function} onClose     — dismissed without choosing; stays put
  */
-export default function FnoOfferModal({ open, onActivate, onSkip }) {
+export default function FnoOfferModal({ open, onActivate, onSkip, onClose }) {
   return (
     <CommonModal
       open={open}
-      onClose={onSkip}
+      onClose={onClose ?? onSkip}
       title={mockFnoOffer.title}
       maxWidth="max-w-md"
       cardClassName="!bg-gradient-profit-glow !border-brand-500/30 shadow-inset-profit"

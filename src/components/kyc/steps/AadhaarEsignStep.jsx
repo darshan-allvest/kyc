@@ -1,12 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CheckCircle2, Fingerprint, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, Fingerprint } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Button from '@/components/common/button/Button';
 import Text from '@/components/common/Text';
 import Heading from '@/components/common/Heading';
-import Checkbox from '@/components/common/Checkbox';
 import Spinner from '@/components/ui/Spinner';
 import KycLayout from '@/components/kyc/KycLayout';
 import KycAlert from '@/components/kyc/KycAlert';
@@ -35,7 +34,6 @@ export default function AadhaarEsignStep() {
 
   const [stage, setStage] = useState(STAGE.AADHAAR);
   const [aadhaar, setAadhaar] = useState('');
-  const [consent, setConsent] = useState(false);
   const [otp, setOtp] = useState('');
   const [signature, setSignature] = useState(null);
   const [error, setError] = useState('');
@@ -48,11 +46,6 @@ export default function AadhaarEsignStep() {
   }, [stage]);
 
   const requestOtp = async () => {
-    if (!consent) {
-      setError('Give your consent to e-sign with Aadhaar.');
-      return;
-    }
-
     setError('');
     setLoading(true);
     const result = await sendAadhaarOtp(aadhaar);
@@ -118,7 +111,7 @@ export default function AadhaarEsignStep() {
             : () => goToStep(KYC_STEP.DOCUMENT)
       }
     >
-      {/* 1 — Aadhaar number + consent */}
+      {/* 1 — Aadhaar number */}
       {stage === STAGE.AADHAAR && (
         <form
           onSubmit={(event) => {
@@ -136,32 +129,12 @@ export default function AadhaarEsignStep() {
             required
             autoFocus
             value={aadhaar}
-            error={error && !consent ? '' : error}
+            error={error}
             onChange={(event) => {
               setAadhaar(event.target.value.replace(/\D/g, '').slice(0, 12));
               if (error) setError('');
             }}
           />
-
-          <div className="mt-4 rounded-lg border border-gray-200 p-3 dark:border-white/10 dark:bg-black/20">
-            <span className="flex items-center gap-2">
-              <ShieldCheck className="size-4 text-brand-500" aria-hidden="true" />
-              <Text as="span" className={cn(KYC_TYPO.body, 'font-semibold')}>
-                {MOCK_AADHAAR.esp}
-              </Text>
-            </span>
-            <Checkbox
-              checked={consent}
-              onChange={(checked) => {
-                setConsent(checked);
-                if (error) setError('');
-              }}
-              className="mt-2 w-full items-start"
-              boxClassName="mt-0.5"
-              label="I authorise the e-sign service provider to authenticate me with UIDAI and affix my digital signature to the account opening form."
-              labelProps={{ className: KYC_TYPO.body }}
-            />
-          </div>
 
           {error && (
             <KycAlert tone="error" className="mt-3">

@@ -42,6 +42,7 @@ export default function ConfirmDetailsStep() {
     declarations,
     segments: savedSegments,
     runningAccountSettlement,
+    riskDisclosureAccepted,
   } = useKycFlow();
 
   const [accepted, setAccepted] = useState(declarations ?? DEFAULT_ACCEPTED);
@@ -50,7 +51,10 @@ export default function ConfirmDetailsStep() {
     runningAccountSettlement ?? RUNNING_ACCOUNT_SETTLEMENT[0]
   );
   const [showFno, setShowFno] = useState(false);
-  const [showRisk, setShowRisk] = useState(false);
+  // Where the disclosure was triggered from decides what happens on accept:
+  // ticking F&O keeps the applicant here, Confirm carries on to payment.
+  const [riskTrigger, setRiskTrigger] = useState(null);
+  const [riskAccepted, setRiskAccepted] = useState(Boolean(riskDisclosureAccepted));
 
   const allRequiredAccepted = REQUIRED_IDS.every((id) => accepted.includes(id));
   const canConfirm = allRequiredAccepted && segments.length > 0;
@@ -65,10 +69,7 @@ export default function ConfirmDetailsStep() {
   const handleToggle = (id, checked) =>
     setAccepted((prev) => (checked ? [...prev, id] : prev.filter((item) => item !== id)));
 
-  const toggleSegment = (id) =>
-    setSegments((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
-
-  const persist = (extra = {}) =>
+  const persistWith = (extra = {}) =>
     updateFlow({
       declarationAccepted: true,
       declarations: accepted,
@@ -77,15 +78,46 @@ export default function ConfirmDetailsStep() {
       runningAccountSettlement: settlement,
       ddpiAccepted: accepted.includes('ddpi'),
       fnoSelected: segments.includes('fno'),
+      riskDisclosureAccepted: riskAccepted,
       ...extra,
     });
 
+  const toggleSegment = (id) => {
+    const wasSelected = segments.includes(id);
+    const nextSegments = wasSelected
+      ? segments.filter((segment) => segment !== id)
+      : [...segments, id];
+    setSegments(nextSegments);
+
+    if (id !== 'fno') return;
+
+    // F&O cannot be activated without acknowledging the derivatives risk
+    // disclosure — ticking the box asks for it there and then.
+    if (!wasSelected) {
+      if (!riskAccepted) setRiskTrigger('segment');
+      return;
+    }
+    // Un-ticking F&O withdraws the acknowledgement with it.
+    setRiskAccepted(false);
+    persistWith({
+      segments: nextSegments,
+      fnoSelected: false,
+      riskDisclosureAccepted: false,
+    });
+  };
+
   const handleConfirm = () => {
-    persist();
+    persistWith();
     // Anyone who left F&O off gets the offer first — that nudge is about F&O
     // alone, not about the other derivative segments.
     if (!segments.includes('fno')) {
       setShowFno(true);
+      return;
+    }
+    // F&O on but the disclosure never acknowledged (modal dismissed earlier):
+    // it has to be signed off before moving on.
+    if (!riskAccepted) {
+      setRiskTrigger('confirm');
       return;
     }
     goToStep(KYC_STEP.PAYMENT);
@@ -96,28 +128,37 @@ export default function ConfirmDetailsStep() {
   const activateFno = () => {
     const nextSegments = [...new Set([...segments, 'fno'])];
     setSegments(nextSegments);
-    persist({ segments: nextSegments, fnoSelected: true });
+    persistWith({ segments: nextSegments, fnoSelected: true });
     setShowFno(false);
-    setShowRisk(true);
+    setRiskTrigger('offer');
   };
 
   const skipFno = () => {
     setShowFno(false);
-    persist();
+    persistWith();
     goToStep(KYC_STEP.PAYMENT);
   };
 
   const acceptRisk = () => {
-    setShowRisk(false);
-    persist({ riskDisclosureAccepted: true });
+    const trigger = riskTrigger;
+    setRiskAccepted(true);
+    setRiskTrigger(null);
+    persistWith({
+      segments: [...new Set([...segments, 'fno'])],
+      fnoSelected: true,
+      riskDisclosureAccepted: true,
+    });
+    // Only the Confirm route was on its way somewhere.
+    if (trigger === 'confirm') goToStep(KYC_STEP.PAYMENT);
   };
 
   // Declining the disclosure backs the activation out again.
   const declineRisk = () => {
     const nextSegments = segments.filter((segment) => segment !== 'fno');
     setSegments(nextSegments);
-    persist({ segments: nextSegments, fnoSelected: false, riskDisclosureAccepted: false });
-    setShowRisk(false);
+    setRiskAccepted(false);
+    persistWith({ segments: nextSegments, fnoSelected: false, riskDisclosureAccepted: false });
+    setRiskTrigger(null);
   };
 
   return (
@@ -173,9 +214,18 @@ export default function ConfirmDetailsStep() {
         />
       </KycLayout>
 
-      <FnoOfferModal open={showFno} onActivate={activateFno} onSkip={skipFno} />
+      <FnoOfferModal
+        open={showFno}
+        onActivate={activateFno}
+        onSkip={skipFno}
+        onClose={() => setShowFno(false)}
+      />
 
-      <RiskDisclosureModal open={showRisk} onAccept={acceptRisk} onDecline={declineRisk} />
+      <RiskDisclosureModal
+        open={Boolean(riskTrigger)}
+        onAccept={acceptRisk}
+        onDecline={declineRisk}
+      />
     </>
   );
 }
