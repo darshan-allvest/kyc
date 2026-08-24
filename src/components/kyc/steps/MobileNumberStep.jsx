@@ -1,0 +1,93 @@
+'use client';
+
+import { useState } from 'react';
+import Button from '@/components/common/button/Button';
+import Text from '@/components/common/Text';
+import KycLayout from '@/components/kyc/KycLayout';
+import KycTextField from '@/components/kyc/KycTextField';
+import KycDemoHint from '@/components/kyc/KycDemoHint';
+import { KYC_STEP, KYC_TYPO } from '@/constants/kycConstants';
+import { sendOtp } from '@/services/kyc/mockKycService';
+import { MOCK_ACCOUNTS } from '@/services/kyc/mockKycData';
+import useKycFlow from '@/hooks/kyc/useKycFlow';
+
+/**
+ * Step 1 — mobile number. Sends a (mock) OTP and moves to verification.
+ */
+export default function MobileNumberStep() {
+  const { goToStep, updateFlow, mobileNumber } = useKycFlow();
+  const [value, setValue] = useState(mobileNumber || '');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+    setLoading(true);
+
+    const result = await sendOtp(value);
+    setLoading(false);
+
+    if (!result.success) {
+      setError(result.error);
+      return;
+    }
+
+    updateFlow({ mobileNumber: result.data.mobile, accountId: result.data.accountId });
+    goToStep(KYC_STEP.OTP);
+  };
+
+  return (
+    <KycLayout
+      title="Open your free account"
+      subtitle="Start your investment journey with us. We'll send an OTP to verify your number."
+      currentStep={KYC_STEP.MOBILE}
+      footer={
+        <Text className={KYC_TYPO.body} color="text-gray-500 dark:text-homepage-darkGrey">
+          By continuing you agree to the terms of this demo. Investments in
+          securities carry market risk.
+        </Text>
+      }
+    >
+      <form onSubmit={handleSubmit} noValidate>
+        <KycTextField
+          label="Mobile number"
+          placeholder="Enter mobile number"
+          prefix="+91"
+          type="tel"
+          inputMode="numeric"
+          autoComplete="tel-national"
+          maxLength={10}
+          required
+          autoFocus
+          value={value}
+          error={error}
+          onChange={(event) => {
+            setValue(event.target.value.replace(/\D/g, '').slice(0, 10));
+            if (error) setError('');
+          }}
+        />
+
+        <Button
+          type="submit"
+          variant="authSubmit"
+          size="lg"
+          fullWidth
+          weight="bold"
+          loading={loading}
+          className="mt-5 text-[14px]"
+        >
+          {loading ? 'Sending OTP...' : 'Open Free Account'}
+        </Button>
+      </form>
+
+      <div className="mt-4 space-y-2">
+        {MOCK_ACCOUNTS.map((account) => (
+          <KycDemoHint key={account.id}>
+            {account.mobile} — {account.label}
+          </KycDemoHint>
+        ))}
+      </div>
+    </KycLayout>
+  );
+}

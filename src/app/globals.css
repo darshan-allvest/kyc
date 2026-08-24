@@ -1,0 +1,820 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Toast progress bar animation */
+@keyframes shrink {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+/* Toast slide animations from different directions */
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutToRight {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutToLeft {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes slideInFromTop {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideOutToTop {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-100%);
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideOutToBottom {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+/* Custom toast animation overrides with !important */
+.animate-slide-in-right[data-state='open'],
+.animate-slide-in-right[data-swipe='none'] {
+  animation: slideInFromRight 300ms ease-out forwards !important;
+}
+
+.animate-slide-out-right[data-state='closed'],
+.animate-slide-out-right[data-swipe='none'] {
+  animation: slideOutToRight 200ms ease-in forwards !important;
+}
+
+.animate-slide-in-left[data-state='open'],
+.animate-slide-in-left[data-swipe='none'] {
+  animation: slideInFromLeft 300ms ease-out forwards !important;
+}
+
+.animate-slide-out-left[data-state='closed'],
+.animate-slide-out-left[data-swipe='none'] {
+  animation: slideOutToLeft 200ms ease-in forwards !important;
+}
+
+.animate-slide-in-top[data-state='open'],
+.animate-slide-in-top[data-swipe='none'] {
+  animation: slideInFromTop 300ms ease-out forwards !important;
+}
+
+.animate-slide-out-top[data-state='closed'],
+.animate-slide-out-top[data-swipe='none'] {
+  animation: slideOutToTop 200ms ease-in forwards !important;
+}
+
+.animate-slide-in-bottom[data-state='open'],
+.animate-slide-in-bottom[data-swipe='none'] {
+  animation: slideInFromBottom 300ms ease-out forwards !important;
+}
+
+.animate-slide-out-bottom[data-state='closed'],
+.animate-slide-out-bottom[data-swipe='none'] {
+  animation: slideOutToBottom 200ms ease-in forwards !important;
+}
+
+@layer utilities {
+  @keyframes caret-blink {
+    0%,
+    70%,
+    100% {
+      opacity: 1;
+    }
+    20%,
+    50% {
+      opacity: 0;
+    }
+  }
+
+  .animate-caret-blink {
+    animation: caret-blink 1.25s ease-out infinite;
+  }
+
+  .paused {
+    animation: loop-scroll 0s linear infinite;
+  }
+
+  /* Shimmer Effect */
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%) skewX(-20deg);
+    }
+    100% {
+      transform: translateX(200%) skewX(-20deg);
+    }
+  }
+
+  .shimmer-button {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shimmer-button::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.4),
+      transparent
+    );
+    animation: shimmer 2.5s infinite;
+  }
+}
+
+@layer base {
+  :root {
+    --radius: 0.5rem; /* Or your actual base radius */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --card: 0 0% 98%;
+    --card-foreground: 0 0% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+    --primary: 240 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 95%;
+    --secondary-foreground: 0 0% 10%;
+    --muted: 0 0% 90%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 0 0% 85%;
+    --accent-foreground: 0 0% 15%;
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 80%;
+    --input: 0 0% 95%;
+    --ring: 240 100% 50%;
+
+    --chart-1: 0 100% 50%;
+    --chart-2: 30 100% 50%;
+    --chart-3: 60 100% 50%;
+    --chart-4: 120 100% 50%;
+    --chart-5: 180 100% 50%;
+
+    --brand-500: #99cc00;
+
+    --strategy-backgroundPrimary: #131313;
+    --strategy-contentSecondary: #a7a7a7;
+    --strategy-borderTransparent: #3e3f41;
+    --strategy-success-light: #03c970;
+    --strategy-error-light: #f75045;
+    --strategy-brand: #7f56d9;
+    --strategy-success: #039855;
+    --strategy-error: #d92d20;
+    --strategy-contentError: #f04438;
+    --strategy-contentSuccess: #12876a;
+    --strategy-contentPrimary: #e6e6e6;
+  }
+
+  body {
+    font-family: var(--font-inter), sans-serif !important;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-sora), sans-serif !important;
+  }
+}
+
+@layer utilities {
+  .bg-custom-radial {
+    background-image: radial-gradient(
+      closest-side,
+      rgba(74, 124, 24, 0.35),
+      #000000
+    );
+  }
+
+  .rounded-lg {
+    border-radius: var(--radius);
+  }
+
+  .rounded-md {
+    border-radius: calc(var(--radius) - 2px);
+  }
+
+  .rounded-sm {
+    border-radius: calc(var(--radius) - 4px);
+  }
+  .bg-portfolio-gradient {
+    background: linear-gradient(84.52deg, #7371fc 0.95%, #99cc00 93.58%);
+  }
+  .bg-main-page-gradient {
+    background: radial-gradient(circle at top left, #89a66b -19%, #191919 14%);
+    /* Your custom gradient */
+  }
+  /* .bg-background{
+    background-color: #000000;
+  } */
+
+  /* Fixed-width digits for socket-driven figures. Inter's default figures are
+     proportional, so a 1 is narrower than a 0 and every tick nudges the layout.
+     Tabular figures make every digit the same advance width, which holds the
+     price steady between updates. */
+  .numeric-alignment {
+    font-variant-numeric: tabular-nums;
+
+    /* Fallback for older browsers (low-level OpenType feature tag) */
+    font-feature-settings: 'tnum';
+  }
+
+  /* Add more brand color utilities as needed... */
+}
+
+@layer components {
+  .main-theme-layout {
+    @apply dark:bg-main-page-gradient bg-white text-black dark:text-white;
+  }
+  .theme-layout {
+    @apply bg-white text-black dark:bg-black dark:text-white;
+  }
+
+  .theme-card-gradient {
+    @apply rounded-xl border border-gray-200 bg-homepage-white text-black dark:border-gray-700 dark:bg-homepage-buyInput dark:bg-container-gradient dark:text-white;
+  }
+
+  .theme-card {
+    @apply rounded-xl border border-gray-200 bg-white text-black dark:border-homepage-borderColor dark:bg-transparent dark:text-white;
+  }
+  .theme-container {
+    @apply rounded-xl border border-gray-200 bg-white text-black dark:border-homepage-borderColor dark:bg-homepage-black dark:text-white;
+  }
+
+  .theme-section-border {
+    @apply rounded-xl border border-gray-200 bg-white text-black dark:border-homepage-borderColor dark:bg-transparent dark:text-white;
+  }
+  .theme-section {
+    @apply bg-white text-black dark:bg-transparent dark:text-white;
+  }
+
+  .theme-button {
+    @apply bg-white text-black dark:bg-black dark:text-white;
+  }
+
+  .theme-text {
+    @apply text-black dark:text-white;
+  }
+  .gradient-card {
+    @apply relative overflow-hidden border font-inter text-black shadow-md;
+  }
+
+  .dark .gradient-card {
+    @apply border-homepage-borderColor bg-card-shade-deep text-white;
+  }
+}
+
+/* globals.css or styles/globals.css */
+.no-arrows::-webkit-outer-spin-button,
+.no-arrows::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.no-arrows {
+  -moz-appearance: textfield; /* Firefox */
+}
+
+input:-webkit-autofill {
+  -webkit-text-fill-color: #000 !important;
+  background-color: transparent !important;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  transition: background-color 9999s ease-in-out 0s !important;
+}
+.dark input:-webkit-autofill {
+  -webkit-text-fill-color: #000 !important;
+  background-color: transparent !important;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  transition: background-color 9999s ease-in-out 0s !important;
+}
+
+/* Base card style */
+.card-gradient {
+  @apply relative overflow-hidden rounded-xl border border-gray-300/60 bg-white;
+  /* Light mode → white bg with subtle border */
+}
+
+/*HEADER MENU ACTIVE LIME GREEN GRADIENT SHADE */
+/* Custom property for animating the gradient angle */
+@property --gradient-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.active-gradient-tab {
+  position: relative;
+  display: inline-flex;
+  border-radius: 9999px;
+  padding: 2px; /* border thickness */
+  background: conic-gradient(
+    from var(--gradient-angle),
+    #a3e635,
+    #666,
+    #a3e635
+  );
+  animation: rotate-gradient 3s linear infinite;
+}
+
+/* Inner container (keeps solid background & static content) */
+.active-gradient-tab > span {
+  position: relative;
+  z-index: 1;
+  background-color: black; /* navbar bg */
+  border-radius: inherit;
+  padding: 0.1rem 1rem;
+  /* display: inline-flex; */
+  /* align-items: center; */
+  /* gap: 0.5rem; */
+}
+
+/* Animate gradient rotation */
+@keyframes rotate-gradient {
+  0% {
+    --gradient-angle: 0deg;
+  }
+  100% {
+    --gradient-angle: 360deg;
+  }
+}
+
+/* Dark mode overrides */
+.dark .card-gradient {
+  @apply border-homepage-borderColor/80 bg-gradient-to-br from-[#1a1a1a] via-[#231F20] to-[#2c1f35];
+}
+
+/* Glow only in dark mode */
+.dark .card-glow::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  left: -50px;
+  width: 200px;
+  height: 200px;
+  background: rgba(147, 51, 234, 0.2); /* purple glow */
+  border-radius: 50%;
+  filter: blur(80px);
+}
+
+.dark .card-glow::after {
+  content: '';
+  position: absolute;
+  bottom: -50px;
+  right: -50px;
+  width: 200px;
+  height: 200px;
+  background: rgba(59, 130, 246, 0.2); /* blue glow */
+  border-radius: 50%;
+  filter: blur(80px);
+}
+
+/* In KEY FINANCIAL TAB ARROW UP DOWN START.css */
+.key-financials-section {
+  [data-state='open'] > svg,
+  [data-state='closed'] > svg {
+    height: 28px !important; /* bigger arrow */
+    width: 28px !important;
+    color: #fff;
+  }
+}
+/* In KEY FINANCIAL TAB ARROW UP DOWN END.css */
+.divident-chart-section .recharts-legend-item .recharts-surface {
+  width: 25px !important; /* adjust width */
+  height: 20px !important; /* adjust height */
+  margin-right: 1px; /* spacing between box and text */
+  margin-top: -3px;
+}
+
+.divident-chart-section .recharts-default-legend {
+  margin: 20px 60px 0px 60px !important;
+}
+
+.investment-strategy {
+  .text-muted-foreground {
+    color: white !important;
+  }
+}
+.faq-accordion svg {
+  stroke: white !important;
+}
+@layer utilities {
+  .custom-select-stock {
+    @apply appearance-none pr-8; /* extra padding for arrow space */
+    background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='34' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+    background-repeat: no-repeat;
+    background-size: 18px 18px; /* 👈 control width & height */
+    background-position: center right 0.75rem; /* 👈 move arrow left/right */
+  }
+}
+
+/* Hide scrollbar for Chrome, Safari, Edge */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for Firefox */
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.promo-banner-bg {
+  background: linear-gradient(130.28deg, #323259 0%, #7371fc 100%);
+}
+
+/* Autofill styles – ONLY for Login page */
+.login-page input:-webkit-autofill,
+.login-page input:-webkit-autofill:hover,
+.login-page input:-webkit-autofill:focus {
+  -webkit-text-fill-color: white !important;
+}
+
+/* Dark-themed inputs – autofill text must be white (class applied directly on <input>) */
+input.autofill-dark:-webkit-autofill,
+input.autofill-dark:-webkit-autofill:hover,
+input.autofill-dark:-webkit-autofill:focus {
+  -webkit-text-fill-color: white !important;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+}
+
+.responsive-table-header {
+  width: calc(100% - 180px) !important;
+}
+
+/* Large laptop */
+@media (min-width: 1440px) and (max-width: 1919px) {
+  .responsive-table-header {
+    width: 85% !important;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1920px) {
+  .responsive-table-header {
+    width: 80% !important;
+  }
+}
+/* Custom Scrollbar with color #99CC00  */
+.brand-scrollbar {
+  -ms-overflow-style: auto; /* IE 10+ */
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: var(--brand-500) transparent; /* Firefox: thumb track */
+}
+
+/* WebKit (Chrome, Safari, Edge Chromium) */
+.brand-scrollbar::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+.brand-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.brand-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--brand-500);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+.brand-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--brand-500);
+}
+
+/* Ribbon wrapper */
+/* @import url(https://fonts.googleapis.com/css?family=Lato:700); */
+/* common */
+.ribbon {
+  z-index: 9;
+  width: 100px;
+  height: 100px;
+  overflow: hidden;
+  position: absolute;
+}
+.ribbon::before,
+.ribbon::after {
+  position: absolute;
+  z-index: -1;
+  content: '';
+  display: block;
+  border: 6px solid #787878;
+}
+.ribbon span {
+  position: absolute;
+  display: block;
+  width: 200px;
+  padding: 8px 0;
+  background-color: #7371fc;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+  color: #fff;
+  font:
+    700 11px/1 'Lato',
+    sans-serif;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+/* top right*/
+.ribbon-top-right {
+  top: -10px;
+  right: -10px;
+}
+.ribbon-top-right::before,
+.ribbon-top-right::after {
+  border-top-color: transparent;
+  border-right-color: transparent;
+}
+.ribbon-top-right::before {
+  top: 0;
+  left: 23px;
+}
+.ribbon-top-right::after {
+  bottom: 23px;
+  right: 0;
+}
+.ribbon-top-right span {
+  left: -25px;
+  top: 20px;
+  transform: rotate(45deg);
+}
+
+/* =========================
+   Ribbon Shimmer Sweep
+   ========================= */
+
+@keyframes ribbon-shimmer {
+  0% {
+    transform: translateX(-150%) skewX(-20deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.35;
+  }
+  50% {
+    transform: translateX(150%) skewX(-20deg);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateX(250%) skewX(-20deg);
+    opacity: 0;
+  }
+}
+
+/* Shimmer layer */
+.ribbon span::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.6),
+    transparent
+  );
+  transform: skewX(-20deg);
+  animation: ribbon-shimmer 2.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.ribbon span {
+  position: absolute;
+  overflow: hidden; /* 👈 critical */
+}
+
+/* Slider Input Styling */
+
+.no-spinner::-webkit-outer-spin-button,
+.no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.no-spinner {
+  -moz-appearance: textfield;
+}
+
+/* Slider base */
+.swp-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background-color: #707070;
+  cursor: pointer;
+}
+
+/* Thumb */
+.swp-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #ffffff;
+  cursor: pointer;
+}
+
+.swp-slider::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #ffffff;
+  cursor: pointer;
+}
+
+.genericTable tr th {
+  border-bottom: 1px solid #2a2a2a;
+}
+.genericTable tr td {
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.skeleton-bg {
+  @apply animate-pulse rounded bg-gray-300 dark:bg-gray-700;
+}
+
+.light-skeleton-bg {
+  @apply animate-pulse rounded bg-gray-300 dark:bg-gray-100;
+}
+
+.container {
+  margin-left: auto;
+  margin-right: auto;
+  padding-right: 15px;
+  padding-left: 15px;
+}
+
+/* Chrome, Safari, Edge */
+.no-spinner::-webkit-outer-spin-button,
+.no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+.no-spinner {
+  -moz-appearance: textfield;
+}
+
+/* Pro Mode: render the equity data tables (holdings, positions, orders, GTT,
+   trades) in a compact style — smaller font AND tighter padding/margins.
+   Scoped via `.equity-table-dense`, applied only in the Pro Mode Orders panel
+   (OrderCover.jsx) and the Pro Mode equity table routes (ProModeLayout.js), so
+   all other tables built on GenericStripeTable keep their normal size. */
+
+/* Table text — the descendant `*` rules override the per-cell `text-sm` set by
+   the <Text> values inside each cell. */
+.equity-table-dense .genericTable th,
+.equity-table-dense .genericTable td,
+.equity-table-dense .genericTable th *,
+.equity-table-dense .genericTable td * {
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+/* Cell padding — override GenericStripeTable's `px-6 py-4` default so rows are
+   shorter/denser. */
+.equity-table-dense .genericTable th,
+.equity-table-dense .genericTable td {
+  padding: 6px 10px;
+}
+
+/* Page chrome inside the panel: shrink the Final components' section titles and
+   collapse their large top margins / section gaps so the panel reads as dense. */
+.equity-table-dense h1,
+.equity-table-dense h2,
+.equity-table-dense h3 {
+  font-size: 14px;
+  line-height: 1.4;
+}
+.equity-table-dense .mt-6,
+.equity-table-dense .mt-4 {
+  margin-top: 0.5rem;
+}
+.equity-table-dense .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0.75rem;
+}
+
+@keyframes home-orb-spin {
+  100% {
+    rotate: 360deg;
+  }
+}
+
+@keyframes home-orb-breathe {
+  0%, 100% {
+    filter: brightness(1) saturate(1);
+    scale: 1;
+  }
+}
+
+.chatbot-orb {
+  display: block;
+  will-change: rotate, scale;
+}
+
+.chatbot-btn:hover .chatbot-orb {
+  animation: 15s linear infinite home-orb-spin,
+    6.5s ease-in-out infinite home-orb-breathe;
+}
+
+/* ─── Reduced motion ────────────────────────────────────────────────────────
+   Honour the OS "reduce motion" setting: transitions and animations collapse to
+   near-instant instead of being removed, so state changes stay perceivable. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ─── Document sheets ───────────────────────────────────────────────────────
+   The account-opening form is rendered as A4-proportioned sheets. On paper the
+   scroll frame disappears and each sheet claims its own page. */
+@media print {
+  .kyc-doc-scroll {
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  .kyc-doc-sheet {
+    break-after: page;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .kyc-doc-sheet:last-child {
+    break-after: auto;
+  }
+}
