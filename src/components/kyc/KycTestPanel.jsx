@@ -34,7 +34,6 @@ const TOGGLE_GROUPS = [
       { key: 'failDigiLockerOtp', label: 'DigiLocker OTP fails' },
       { key: 'failDigiLockerPin', label: 'DigiLocker PIN rejected' },
       { key: 'failDigiLocker', label: 'DigiLocker fetch fails' },
-      { key: 'failDocumentUpload', label: 'Document upload fails' },
       { key: 'failPan', label: 'PAN verification fails' },
       { key: 'failGovernmentFetch', label: 'Details fetch fails' },
     ],

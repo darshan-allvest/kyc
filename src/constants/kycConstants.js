@@ -7,15 +7,17 @@
 export const KYC_STEP = Object.freeze({
   MOBILE: 'MOBILE',
   OTP: 'OTP',
-  ACCOUNT: 'ACCOUNT',
+  EMAIL: 'EMAIL',
+  EMAIL_OTP: 'EMAIL_OTP',
+  PASSWORD: 'PASSWORD',
+  MPIN: 'MPIN',
   KYC_STATUS: 'KYC_STATUS',
-  METHOD_CHOICE: 'METHOD_CHOICE',
-  DOCUMENT_UPLOAD: 'DOCUMENT_UPLOAD',
   DIGILOCKER: 'DIGILOCKER',
   // The PAN screen *is* the "Basic Details" milestone: PAN is the only thing
   // asked there, exactly as a broker's own journey does it.
   PAN: 'PAN',
   GOVERNMENT_FETCH: 'GOVERNMENT_FETCH',
+  PROFILE_DETAILS: 'PROFILE_DETAILS',
   CONFIRM_DETAILS: 'CONFIRM_DETAILS',
   PAYMENT: 'PAYMENT',
   BANK_DETAILS: 'BANK_DETAILS',
@@ -46,13 +48,15 @@ export const KYC_STEPPER_STEPS = Object.freeze([
 export const STEP_TO_STEPPER_KEY = Object.freeze({
   [KYC_STEP.MOBILE]: 'BASIC',
   [KYC_STEP.OTP]: 'BASIC',
-  [KYC_STEP.ACCOUNT]: 'BASIC',
+  [KYC_STEP.EMAIL]: 'BASIC',
+  [KYC_STEP.EMAIL_OTP]: 'BASIC',
+  [KYC_STEP.PASSWORD]: 'BASIC',
+  [KYC_STEP.MPIN]: 'BASIC',
   [KYC_STEP.KYC_STATUS]: 'BASIC',
   [KYC_STEP.PAN]: 'BASIC',
-  [KYC_STEP.METHOD_CHOICE]: 'PAN',
-  [KYC_STEP.DOCUMENT_UPLOAD]: 'PAN',
   [KYC_STEP.DIGILOCKER]: 'PAN',
   [KYC_STEP.GOVERNMENT_FETCH]: 'VERIFY',
+  [KYC_STEP.PROFILE_DETAILS]: 'VERIFY',
   [KYC_STEP.CONFIRM_DETAILS]: 'VERIFY',
   [KYC_STEP.PAYMENT]: 'PAYMENT',
   [KYC_STEP.BANK_DETAILS]: 'BANK',
@@ -68,8 +72,9 @@ export const STEP_TO_STEPPER_KEY = Object.freeze({
 });
 
 // ─── KYC methods (Scenario B) ────────────────────────────────────────────────
+// DigiLocker is the only way to share documents — the manual upload journey was
+// removed, so an applicant without a KYC record always goes through DigiLocker.
 export const KYC_METHOD = Object.freeze({
-  UPLOAD: 'UPLOAD',
   DIGILOCKER: 'DIGILOCKER',
 });
 
@@ -88,9 +93,41 @@ export const PERMISSION_STATE = Object.freeze({
 export const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 export const ACCOUNT_NUMBER_REGEX = /^\d{9,18}$/;
 
+// Login credentials set during onboarding.
+export const MPIN_LENGTH = 6;
+
 export const ACCOUNT_TYPES = Object.freeze(['Savings', 'Current']);
 
 // ─── Nominee (Step: Nominee) ─────────────────────────────────────────────────
+// SEBI allows up to three nominees; their shares must add up to 100%.
+export const MAX_NOMINEES = 3;
+
+// "I want the following nomination details to be printed in the account holding
+// statements" — exactly one of these is ticked.
+export const NOMINEE_STATEMENT_OPTIONS = Object.freeze([
+  { id: 'NAMES', label: 'Name of the Nominee(s)' },
+  {
+    id: 'FLAG',
+    label: 'Whether nomination given: Yes / No (not name of the nominee)',
+  },
+]);
+
+// SEBI Annexure-B — the declaration an applicant signs when opting out of
+// nomination. Shown in full on the Nominee step before the opt-out is accepted.
+export const NOMINEE_OPT_OUT_DECLARATION = Object.freeze({
+  title: 'Declaration for Opting-out of Nomination',
+  intro:
+    'I hereby confirm that I do not wish to appoint any nominee(s) to my demat account / mutual fund folio at this point of time.',
+  understandingLabel: 'I understand that —',
+  points: Object.freeze([
+    'the nomination helps to quickly identify the person for transfer of securities and helps in faster and smoother transmission of my securities to my legal heir(s) after my demise.',
+    'in the absence of a nomination, my legal heir(s) may require the submission of certain additional legal or court-issued documents which may delay the process of transmission of securities to my legal heir(s).',
+    'if no claim is made on the account / folio for a prolonged period after my demise, the holdings may be treated as unclaimed assets and they may be transferred to Investor Education and Protection Fund Authority (IEPF) in accordance with the applicable regulatory framework.',
+  ]),
+  confirmation:
+    'I confirm that I have understood the above implications and that my decision to opt out of nomination is voluntary.',
+});
+
 export const NOMINEE_RELATIONSHIPS = Object.freeze([
   'Spouse',
   'Son',
@@ -102,9 +139,65 @@ export const NOMINEE_RELATIONSHIPS = Object.freeze([
   'Other',
 ]);
 
+// ─── Profile fields (Step: Profile Details / Confirm Details) ────────────────
+// The government fetch does not return these, so an applicant without a KYC
+// record fills them in; they are also the fields Edit Details may correct.
+export const PROFILE_FIELDS = Object.freeze([
+  {
+    key: 'occupation',
+    label: 'Occupation',
+    options: Object.freeze([
+      'Private Sector',
+      'Public Sector',
+      'Government Service',
+      'Business',
+      'Professional',
+      'Student',
+      'Retired',
+      'Housewife',
+      'Agriculturist',
+    ]),
+  },
+  {
+    key: 'maritalStatus',
+    label: 'Marital Status',
+    options: Object.freeze(['Single', 'Married', 'Divorced', 'Widowed']),
+  },
+  {
+    key: 'incomeRange',
+    label: 'Gross Annual Income',
+    options: Object.freeze([
+      'Below ₹1 lakh',
+      '₹1 - 5 lakh',
+      '₹5 - 10 lakh',
+      '₹10 - 25 lakh',
+      'Above ₹25 lakh',
+    ]),
+  },
+  {
+    key: 'sourceOfWealth',
+    label: 'Source Of Wealth',
+    options: Object.freeze(['Salary', 'Business income', 'Investments', 'Ancestral', 'Gift', 'Other']),
+  },
+  {
+    key: 'tradingExperience',
+    label: 'Trading Experience',
+    options: Object.freeze(['No experience', 'Less than 1 Year', '1 - 5 Years', 'More than 5 Years']),
+  },
+]);
+
+export const PROFILE_FIELD_KEYS = Object.freeze(PROFILE_FIELDS.map((field) => field.key));
+
 // ─── Declarations (Step: Verify Details) ─────────────────────────────────────
 // Running-account settlement periods a broker may offer.
-export const RUNNING_ACCOUNT_SETTLEMENT = Object.freeze(['90 days', '30 days']);
+export const RUNNING_ACCOUNT_SETTLEMENT = Object.freeze(['90 days', '30 days', 'Daily']);
+
+// ─── Signature (Step: Signature) ─────────────────────────────────────────────
+// Both a drawn signature and an uploaded image of it are required.
+export const SIGNATURE_UPLOAD = Object.freeze({
+  acceptedTypes: Object.freeze(['image/png', 'image/jpeg']),
+  maxBytes: 2 * 1024 * 1024,
+});
 
 // ─── Assets ──────────────────────────────────────────────────────────────────
 export const KYC_LOGO_SRC = '/assets/logo/allvest-horizontal-logo.avif';

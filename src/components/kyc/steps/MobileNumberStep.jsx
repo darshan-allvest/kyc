@@ -6,6 +6,7 @@ import Text from '@/components/common/Text';
 import KycLayout from '@/components/kyc/KycLayout';
 import KycTextField from '@/components/kyc/KycTextField';
 import KycDemoHint from '@/components/kyc/KycDemoHint';
+import Checkbox from '@/components/common/Checkbox';
 import { KYC_STEP, KYC_TYPO } from '@/constants/kycConstants';
 import { sendOtp } from '@/services/kyc/mockKycService';
 import { MOCK_ACCOUNTS } from '@/services/kyc/mockKycData';
@@ -19,9 +20,14 @@ export default function MobileNumberStep() {
   const [value, setValue] = useState(mobileNumber || '');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedSebi, setAcceptedSebi] = useState(false);
+
+  const consentGiven = acceptedTerms && acceptedSebi;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (!consentGiven) return;
     setError('');
     setLoading(true);
 
@@ -68,6 +74,27 @@ export default function MobileNumberStep() {
           }}
         />
 
+        <div className="mt-4 space-y-3">
+          <Checkbox
+            id="kyc-accept-terms"
+            checked={acceptedTerms}
+            onChange={setAcceptedTerms}
+            className="items-start"
+            boxClassName="mt-0.5"
+            label="I accept the Terms & Conditions and the Privacy Policy."
+            labelProps={{ className: 'leading-snug' }}
+          />
+          <Checkbox
+            id="kyc-accept-sebi"
+            checked={acceptedSebi}
+            onChange={setAcceptedSebi}
+            className="items-start"
+            boxClassName="mt-0.5"
+            label="I agree to continue as per SEBI guidelines."
+            labelProps={{ className: 'leading-snug' }}
+          />
+        </div>
+
         <Button
           type="submit"
           variant="authSubmit"
@@ -75,6 +102,7 @@ export default function MobileNumberStep() {
           fullWidth
           weight="bold"
           loading={loading}
+          disabled={!consentGiven}
           className="mt-5 text-[14px]"
         >
           {loading ? 'Sending OTP...' : 'Open Free Account'}

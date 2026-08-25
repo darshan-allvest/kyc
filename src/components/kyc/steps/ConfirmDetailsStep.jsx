@@ -37,6 +37,7 @@ export default function ConfirmDetailsStep() {
   const {
     personalDetails,
     panDetails,
+    kycCompleted,
     goToStep,
     updateFlow,
     declarations,
@@ -169,7 +170,9 @@ export default function ConfirmDetailsStep() {
         showStepper
         currentStep={KYC_STEP.CONFIRM_DETAILS}
         maxWidth="max-w-[34rem]"
-        onBack={() => goToStep(KYC_STEP.GOVERNMENT_FETCH)}
+        onBack={() =>
+          goToStep(kycCompleted ? KYC_STEP.GOVERNMENT_FETCH : KYC_STEP.PROFILE_DETAILS)
+        }
         footer={
           <>
             <Button

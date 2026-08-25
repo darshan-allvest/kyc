@@ -16,13 +16,15 @@ import useKycFlow from '@/hooks/kyc/useKycFlow';
 import KycTestPanel from '@/components/kyc/KycTestPanel';
 import MobileNumberStep from '@/components/kyc/steps/MobileNumberStep';
 import OtpVerificationStep from '@/components/kyc/steps/OtpVerificationStep';
-import AccountDetailsStep from '@/components/kyc/steps/AccountDetailsStep';
+import EmailStep from '@/components/kyc/steps/EmailStep';
+import EmailOtpStep from '@/components/kyc/steps/EmailOtpStep';
+import SetPasswordStep from '@/components/kyc/steps/SetPasswordStep';
+import MpinStep from '@/components/kyc/steps/MpinStep';
 import KycStatusStep from '@/components/kyc/steps/KycStatusStep';
-import KycMethodStep from '@/components/kyc/steps/KycMethodStep';
-import DocumentUploadStep from '@/components/kyc/steps/DocumentUploadStep';
 import DigiLockerStep from '@/components/kyc/steps/DigiLockerStep';
 import PanVerificationStep from '@/components/kyc/steps/PanVerificationStep';
 import GovernmentDataFetchStep from '@/components/kyc/steps/GovernmentDataFetchStep';
+import ProfileDetailsStep from '@/components/kyc/steps/ProfileDetailsStep';
 import ConfirmDetailsStep from '@/components/kyc/steps/ConfirmDetailsStep';
 import PaymentStep from '@/components/kyc/steps/PaymentStep';
 import BankDetailsStep from '@/components/kyc/steps/BankDetailsStep';
@@ -37,13 +39,15 @@ import KycSuccessStep from '@/components/kyc/steps/KycSuccessStep';
 const STEP_COMPONENTS = {
   [KYC_STEP.MOBILE]: MobileNumberStep,
   [KYC_STEP.OTP]: OtpVerificationStep,
-  [KYC_STEP.ACCOUNT]: AccountDetailsStep,
+  [KYC_STEP.EMAIL]: EmailStep,
+  [KYC_STEP.EMAIL_OTP]: EmailOtpStep,
+  [KYC_STEP.PASSWORD]: SetPasswordStep,
+  [KYC_STEP.MPIN]: MpinStep,
   [KYC_STEP.KYC_STATUS]: KycStatusStep,
-  [KYC_STEP.METHOD_CHOICE]: KycMethodStep,
-  [KYC_STEP.DOCUMENT_UPLOAD]: DocumentUploadStep,
   [KYC_STEP.DIGILOCKER]: DigiLockerStep,
   [KYC_STEP.PAN]: PanVerificationStep,
   [KYC_STEP.GOVERNMENT_FETCH]: GovernmentDataFetchStep,
+  [KYC_STEP.PROFILE_DETAILS]: ProfileDetailsStep,
   [KYC_STEP.CONFIRM_DETAILS]: ConfirmDetailsStep,
   [KYC_STEP.PAYMENT]: PaymentStep,
   [KYC_STEP.BANK_DETAILS]: BankDetailsStep,

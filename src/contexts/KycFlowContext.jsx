@@ -22,11 +22,13 @@ const initialState = {
 
   account: null, // { email, name, provider }
   accountVerified: false,
+  emailOtpVerified: false,
+  passwordSet: false,
+  mpinSet: false, // the MPIN itself is never kept in state
 
   kycCompleted: null, // null = not checked yet
   existingKyc: null,
-  kycMethod: null, // KYC_METHOD.UPLOAD | KYC_METHOD.DIGILOCKER
-  uploadedDocuments: [],
+  kycMethod: null, // KYC_METHOD.DIGILOCKER
   digiLockerData: null,
   digiLockerSelection: [], // ids of the DigiLocker documents shared with us
 
@@ -44,8 +46,10 @@ const initialState = {
   riskDisclosureAccepted: false, // acknowledged when F&O is activated
   paymentMethod: null, // 'UPI' | 'BANK' — chosen on the payment screen
   payment: null, // { method, app, bank, amount, reference }
-  nominees: [],
+  nominees: [], // up to MAX_NOMINEES, shares adding up to 100%
   nomineeOptOut: false,
+  nomineeOptOutAcknowledged: false, // SEBI Annexure-B declaration
+  nomineeStatementPreferences: [], // NOMINEE_STATEMENT_OPTIONS ids — one or both
   consents: [], // ids from mockConsents
   runningAccountSettlement: null, // '90 days' | '30 days'
   ddpiAccepted: false,
@@ -58,7 +62,8 @@ const initialState = {
   location: null,
 
   selfie: null, // data URL, in memory only
-  signature: null, // data URL, in memory only
+  signature: null, // drawn signature, data URL, in memory only
+  signatureUpload: null, // { dataUrl, fileName, size } — uploaded signature image
 
   aadhaarEsign: null, // { esp, reference, signedAt } from the final e-sign
   documentGenerated: false,

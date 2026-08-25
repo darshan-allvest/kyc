@@ -9,8 +9,7 @@ import KycOtpInput from '@/components/kyc/KycOtpInput';
 import KycAlert from '@/components/kyc/KycAlert';
 import KycDemoHint from '@/components/kyc/KycDemoHint';
 import { KYC_STEP, KYC_TYPO } from '@/constants/kycConstants';
-import { maskMobile } from '@/lib/kyc/kycFormatters';
-import { sendOtp, verifyOtp } from '@/services/kyc/mockKycService';
+import { sendEmailOtp, verifyEmailOtp } from '@/services/kyc/mockKycService';
 import { MOCK_OTP } from '@/services/kyc/mockKycData';
 import { useResendTimer } from '@/hooks/kyc/useResendTimer';
 import useKycFlow from '@/hooks/kyc/useKycFlow';
@@ -18,11 +17,12 @@ import useKycFlow from '@/hooks/kyc/useKycFlow';
 const OTP_LENGTH = 6;
 
 /**
- * Step 2 — OTP verification. The number comes from step 1; it is never
+ * Step 4 — email OTP. The address comes from the email screen; it is never
  * re-entered here.
  */
-export default function OtpVerificationStep() {
-  const { mobileNumber, goToStep, updateFlow } = useKycFlow();
+export default function EmailOtpStep() {
+  const { goToStep, updateFlow, account, mobileNumber } = useKycFlow();
+  const email = account?.email || '';
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -44,7 +44,7 @@ export default function OtpVerificationStep() {
     setNotice('');
     setLoading(true);
 
-    const result = await verifyOtp(mobileNumber, submittedOtp);
+    const result = await verifyEmailOtp(email, submittedOtp);
     setLoading(false);
 
     if (!result.success) {
@@ -53,8 +53,13 @@ export default function OtpVerificationStep() {
       return;
     }
 
-    updateFlow({ otpVerified: true });
-    goToStep(KYC_STEP.EMAIL);
+    updateFlow({
+      account: { ...(account || {}), email: result.data.email, name: result.data.name },
+      accountId: result.data.accountId,
+      emailOtpVerified: true,
+      accountVerified: true,
+    });
+    goToStep(KYC_STEP.PASSWORD);
   };
 
   const handleResend = async () => {
@@ -63,7 +68,7 @@ export default function OtpVerificationStep() {
     setError('');
     setOtp('');
 
-    const result = await sendOtp(mobileNumber);
+    const result = await sendEmailOtp(email, { mobile: mobileNumber });
     setResending(false);
 
     if (!result.success) {
@@ -77,10 +82,10 @@ export default function OtpVerificationStep() {
   return (
     <KycLayout
       showStepper
-      currentStep={KYC_STEP.OTP}
-      title="Verify your mobile number"
-      subtitle={`OTP sent to ${maskMobile(mobileNumber)}`}
-      onBack={() => goToStep(KYC_STEP.MOBILE)}
+      currentStep={KYC_STEP.EMAIL_OTP}
+      title="Verify your email"
+      subtitle={`OTP sent to ${email}`}
+      onBack={loading ? undefined : () => goToStep(KYC_STEP.EMAIL)}
     >
       <form
         onSubmit={(event) => {

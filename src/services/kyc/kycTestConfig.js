@@ -12,7 +12,7 @@ export const DEFAULT_KYC_TEST_CONFIG = {
   //              9876543210 / rahul.sharma@example.com has KYC,
   //              9123456780 / priya.mehta@example.com does not
   // 'existing' → force Scenario A (fetch & review an existing record)
-  // 'new'      → force Scenario B (Upload Documents / DigiLocker)
+  // 'new'      → force Scenario B (DigiLocker)
   kycScenario: 'auto',
 
   // ── Simulated API latency (ms) ───────────────────────────────────────────
@@ -27,7 +27,6 @@ export const DEFAULT_KYC_TEST_CONFIG = {
   failDigiLockerOtp: false, // DigiLocker OTP send/verify fails
   failDigiLockerPin: false, // DigiLocker security PIN is rejected
   failDigiLocker: false, // DigiLocker document fetch fails
-  failDocumentUpload: false, // manual document upload fails
   failPan: false, // PAN verification fails (valid format, records not found)
   failGovernmentFetch: false, // fetching PAN/personal/bank details fails
   failPersonalDetailsUpdate: false, // editing the fetched profile fields fails

@@ -7,44 +7,11 @@ import Button from '@/components/common/button/Button';
 import Text from '@/components/common/Text';
 import Heading from '@/components/common/Heading';
 import KycSelectField from '@/components/kyc/KycSelectField';
+import KycTextField from '@/components/kyc/KycTextField';
 import KycAlert from '@/components/kyc/KycAlert';
-import { KYC_TYPO } from '@/constants/kycConstants';
+import { KYC_TYPO, PROFILE_FIELDS } from '@/constants/kycConstants';
 import { maskPan } from '@/lib/kyc/kycFormatters';
-
-// Identity fields come from the KYC record and cannot be edited here; the
-// profile fields below are the ones an applicant may correct.
-const EDITABLE_FIELDS = [
-  {
-    key: 'occupation',
-    label: 'Occupation',
-    options: [
-      'Private Sector',
-      'Public Sector',
-      'Government Service',
-      'Business',
-      'Professional',
-      'Student',
-      'Retired',
-      'Housewife',
-      'Agriculturist',
-    ],
-  },
-  {
-    key: 'incomeRange',
-    label: 'Gross Annual Income',
-    options: ['Below ₹1 lakh', '₹1 - 5 lakh', '₹5 - 10 lakh', '₹10 - 25 lakh', 'Above ₹25 lakh'],
-  },
-  {
-    key: 'tradingExperience',
-    label: 'Trading Experience',
-    options: ['No experience', 'Less than 1 Year', '1 - 5 Years', 'More than 5 Years'],
-  },
-  {
-    key: 'sourceOfWealth',
-    label: 'Source Of Wealth',
-    options: ['Salary', 'Business income', 'Investments', 'Ancestral', 'Gift', 'Other'],
-  },
-];
+import { validateIndianName } from '@/utils/formValidators';
 
 /**
  * PersonalDetailsSection — the collapsible "Personal Details" block on the
@@ -59,8 +26,11 @@ export default function PersonalDetailsSection({ details, pan, onSave, className
   const [open, setOpen] = useState(true);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(() =>
-    EDITABLE_FIELDS.reduce((acc, field) => ({ ...acc, [field.key]: details?.[field.key] ?? '' }), {})
+    PROFILE_FIELDS.reduce((acc, field) => ({ ...acc, [field.key]: details?.[field.key] ?? '' }), {
+      fullName: details?.fullName ?? '',
+    })
   );
+  const [nameError, setNameError] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -78,9 +48,16 @@ export default function PersonalDetailsSection({ details, pan, onSave, className
   ];
 
   const handleSave = async () => {
+    const name = form.fullName.trim();
+    if (!name || !validateIndianName(name)) {
+      setNameError('Enter your name as it appears on your PAN.');
+      return;
+    }
+
+    setNameError('');
     setSaving(true);
     setError('');
-    const result = await onSave(form);
+    const result = await onSave({ ...form, fullName: name });
     setSaving(false);
 
     if (!result?.success) {
@@ -117,7 +94,19 @@ export default function PersonalDetailsSection({ details, pan, onSave, className
         <>
           {editing ? (
             <div className="mt-3 space-y-3">
-              {EDITABLE_FIELDS.map((field) => (
+              <KycTextField
+                label="Full Name"
+                autoComplete="name"
+                required
+                value={form.fullName}
+                error={nameError}
+                onChange={(event) => {
+                  setForm((prev) => ({ ...prev, fullName: event.target.value }));
+                  if (nameError) setNameError('');
+                }}
+              />
+
+              {PROFILE_FIELDS.map((field) => (
                 <KycSelectField
                   key={field.key}
                   label={field.label}
@@ -150,6 +139,7 @@ export default function PersonalDetailsSection({ details, pan, onSave, className
                   onClick={() => {
                     setEditing(false);
                     setError('');
+                    setNameError('');
                   }}
                 >
                   Cancel

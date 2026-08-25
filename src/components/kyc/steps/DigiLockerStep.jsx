@@ -141,7 +141,7 @@ export default function DigiLockerStep() {
       setStage(previous);
       return;
     }
-    goToStep(KYC_STEP.METHOD_CHOICE);
+    goToStep(KYC_STEP.PAN);
   };
 
   return (

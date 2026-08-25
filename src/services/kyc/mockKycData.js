@@ -4,7 +4,7 @@
 //
 // Two demo accounts drive the two journeys:
 //   • Rahul Sharma  → KYC already completed  (Scenario A: fetch & review)
-//   • Priya Mehta   → no KYC yet             (Scenario B: upload / DigiLocker)
+//   • Priya Mehta   → no KYC yet             (Scenario B: DigiLocker)
 // Any other valid mobile number behaves like a new user.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -196,18 +196,6 @@ export const resolveAccount = ({ accountId, mobile, email } = {}) =>
   FALLBACK_ACCOUNT;
 
 // ─── Shared, account-independent data ────────────────────────────────────────
-export const mockUploadDocumentTypes = [
-  { id: 'identity', label: 'Identity proof', hint: 'Aadhaar / Passport / Voter ID', required: true },
-  { id: 'address', label: 'Address proof', hint: 'Aadhaar / Utility bill / Bank statement', required: true },
-  { id: 'pan', label: 'PAN card', hint: 'Front side, clearly visible', required: true },
-];
-
-export const mockUploadedDocuments = [
-  { id: 'identity', fileName: 'test-aadhaar-front.jpg', size: '412 KB', status: 'Uploaded' },
-  { id: 'address', fileName: 'test-address-proof.pdf', size: '288 KB', status: 'Uploaded' },
-  { id: 'pan', fileName: 'test-pan-card.jpg', size: '196 KB', status: 'Uploaded' },
-];
-
 // Stages shown on the "Getting your details from Govt. Database" screen. Bank
 // details still come back with the fetch — they are just not surfaced here,
 // since the applicant enters and verifies the account on the Bank step.
@@ -252,6 +240,7 @@ export const TRADING_SEGMENT_DECLARATIONS = [
   // Derivative segments are opt-in, like F&O.
   { id: 'commodity', label: 'Commodities', defaultChecked: false },
   { id: 'currency', label: 'Currency Derivatives', defaultChecked: false },
+  { id: 'debt', label: 'Debt', defaultChecked: false },
 ];
 
 // The declaration block on the Confirm Details screen. `required: true` items
@@ -301,13 +290,6 @@ export const mockDeclarations = [
     id: 'pastActions',
     required: true,
     text: 'I do not have any Past Actions from SEBI/Exchange in last 3 years',
-  },
-  {
-    id: 'nomineeInStatement',
-    required: false,
-    text: 'I Accept Nominee details to be printed in Periodic Statement of Holdings',
-    detail:
-      'Your nominee names appear on the periodic holding statements we send you. Decline if you would rather keep them off the statement.',
   },
 ];
 

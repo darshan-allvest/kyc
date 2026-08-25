@@ -10,9 +10,21 @@
 import {
   PAN_REGEX,
   INDIAN_MOBILE_REGEX,
+  EMAIL_REGEX,
+  PASSWORD_REGEX,
+  INDIAN_NAME_REGEX,
   hasAllSameDigits,
+  validateEmailFormat,
 } from '@/utils/formValidators';
-import { IFSC_REGEX, ACCOUNT_NUMBER_REGEX, PERMISSION_STATE } from '@/constants/kycConstants';
+import {
+  IFSC_REGEX,
+  ACCOUNT_NUMBER_REGEX,
+  MPIN_LENGTH,
+  MAX_NOMINEES,
+  NOMINEE_STATEMENT_OPTIONS,
+  PROFILE_FIELD_KEYS,
+  PERMISSION_STATE,
+} from '@/constants/kycConstants';
 import { getKycTestConfig } from '@/services/kyc/kycTestConfig';
 import {
   MOCK_OTP,
@@ -22,7 +34,6 @@ import {
   findAccountByEmail,
   findAccountByMobile,
   resolveAccount,
-  mockUploadedDocuments,
   mockConsents,
   mockPayment,
   mockEsign,
@@ -35,6 +46,22 @@ export const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const wait = async (multiplier = 1) => {
   const { delay: base } = getKycTestConfig();
   await delay(Math.round(base * multiplier));
+};
+
+// 123456 / 654321 and friends — rejected as an MPIN.
+const isSequential = (digits) =>
+  digits
+    .split('')
+    .every((digit, index, all) =>
+      index === 0 ? true : Number(digit) - Number(all[index - 1]) === Number(all[1]) - Number(all[0])
+    ) && Math.abs(Number(digits[1]) - Number(digits[0])) === 1;
+
+// 'auto' → whatever the signed-in demo account has; the other two force it.
+const hasCompletedKyc = (identity) => {
+  const { kycScenario } = getKycTestConfig();
+  if (kycScenario === 'existing') return true;
+  if (kycScenario === 'new') return false;
+  return Boolean(resolveAccount(identity).kycCompleted);
 };
 
 const ok = (data = null) => ({ success: true, data, error: null });
@@ -75,32 +102,94 @@ export async function verifyOtp(mobile, otp) {
   return ok({ mobile, otpVerified: true });
 }
 
-// ─── Step 4 — account details ────────────────────────────────────────────────
-export async function verifyAccount({ email, password, mobile }) {
+// ─── Step 3 — email ──────────────────────────────────────────────────────────
+// The email screen only sends an OTP; the password and MPIN are set on their
+// own screens once the address is verified.
+export async function sendEmailOtp(email, { mobile } = {}) {
   await wait();
-  if (getKycTestConfig().failAccount)
-    return fail('We could not verify these details. Please try again.');
+  const value = (email || '').trim().toLowerCase();
 
-  const account = findAccountByEmail(email);
-  if (!account || account.password !== password)
-    return fail('Incorrect email or password. Use one of the demo logins shown below.');
+  if (!value) return fail('Enter your email address to continue.');
+  if (!EMAIL_REGEX.test(value) || !validateEmailFormat(value))
+    return fail('Enter a valid email address.');
+  if (getKycTestConfig().failAccount)
+    return fail('We could not send the OTP to this email. Please try again.');
+
+  const account = findAccountByEmail(value);
+  if (!account)
+    return fail('This email is not part of the demo. Use one of the logins shown below.');
 
   // Both demo accounts exist, so a mismatched pair is a likely tester slip
   // rather than a real failure — name the right email instead of a dead end.
   const byMobile = findAccountByMobile(mobile);
   if (byMobile && byMobile.id !== account.id)
     return fail(
-      `${account.email} is registered to another mobile number. For +91 ${byMobile.mobile}, sign in with ${byMobile.email}.`
+      `${account.email} is registered to another mobile number. For +91 ${byMobile.mobile}, continue with ${byMobile.email}.`
     );
 
   return ok({
-    accountId: account.id,
     email: account.email,
-    name: account.name,
+    accountId: account.id,
+    otpLength: MOCK_OTP.length,
+    resendAfter: 30,
+  });
+}
+
+// ─── Step 4 — email OTP ──────────────────────────────────────────────────────
+export async function verifyEmailOtp(email, otp) {
+  await wait();
+  const { failOtp, expireOtp } = getKycTestConfig();
+
+  if (!otp || otp.length !== MOCK_OTP.length)
+    return fail(`Enter the ${MOCK_OTP.length}-digit OTP.`);
+  if (expireOtp) return fail('This OTP has expired. Request a new one.', 'OTP_EXPIRED');
+  if (failOtp || otp !== MOCK_OTP)
+    return fail('Incorrect OTP. Please check and try again.', 'OTP_INVALID');
+
+  const account = findAccountByEmail(email);
+
+  return ok({
+    accountId: account?.id ?? null,
+    email: account?.email ?? email,
+    name: account?.name ?? null,
+    emailOtpVerified: true,
     accountVerified: true,
   });
 }
 
+// ─── Step 5 — set password ───────────────────────────────────────────────────
+export async function setAccountPassword({ password, confirmPassword } = {}) {
+  await wait(0.7);
+
+  if (!password) return fail('Enter a password.');
+  if (!PASSWORD_REGEX.test(password))
+    return fail(
+      'Use at least 8 characters with an uppercase, a lowercase, a number and a symbol.'
+    );
+  if (password !== confirmPassword) return fail('Both passwords must match.');
+  if (getKycTestConfig().failAccount)
+    return fail('We could not save your password. Please try again.');
+
+  return ok({ passwordSet: true });
+}
+
+// ─── Step 6 — set MPIN ───────────────────────────────────────────────────────
+export async function setMpin({ mpin, confirmMpin } = {}) {
+  await wait(0.7);
+  const digits = (mpin || '').replace(/\D/g, '');
+
+  if (digits.length !== MPIN_LENGTH) return fail(`Enter a ${MPIN_LENGTH}-digit MPIN.`);
+  if (/^(\d)\1+$/.test(digits)) return fail('Your MPIN cannot be the same digit repeated.');
+  if (isSequential(digits)) return fail('Your MPIN cannot be a sequence like 123456.');
+  if (digits !== confirmMpin) return fail('Both MPINs must match.');
+  if (getKycTestConfig().failAccount)
+    return fail('We could not set your MPIN. Please try again.');
+
+  return ok({ mpinSet: true });
+}
+
+// Google sign-in is simulated: it stands in for email + OTP + password, so the
+// journey continues at the MPIN screen.
 export async function verifyAccountWithGoogle({ mobile } = {}) {
   await wait(0.7);
   if (getKycTestConfig().failAccount)
@@ -114,21 +203,18 @@ export async function verifyAccountWithGoogle({ mobile } = {}) {
     name: account.name,
     provider: 'Google',
     accountVerified: true,
+    emailOtpVerified: true,
+    passwordSet: true,
   });
 }
 
-// ─── Step 5 — KYC status ─────────────────────────────────────────────────────
+// ─── Step 7 — KYC status ─────────────────────────────────────────────────────
 export async function getKycStatus(identity) {
   await wait();
-  const { failKycStatus, kycScenario } = getKycTestConfig();
+  const { failKycStatus } = getKycTestConfig();
   if (failKycStatus) return fail('We could not check your KYC status. Please retry.');
 
-  const account = resolveAccount(identity);
-  // 'auto' → whatever the signed-in demo account has; the other two force it.
-  const kycCompleted =
-    kycScenario === 'existing' ? true : kycScenario === 'new' ? false : account.kycCompleted;
-
-  return ok({ kycCompleted, accountId: account.id });
+  return ok({ kycCompleted: hasCompletedKyc(identity), accountId: resolveAccount(identity).id });
 }
 
 export async function fetchExistingKyc(identity) {
@@ -180,27 +266,22 @@ export async function verifyDigiLockerPin(pin) {
   return ok({ pinVerified: true });
 }
 
-// ─── Step 5b — new KYC: DigiLocker / manual upload ───────────────────────────
+// ─── Step 8 — new KYC: DigiLocker ────────────────────────────────────────────
 export async function fetchDigiLockerDetails(identity) {
   await wait(1.4);
   if (getKycTestConfig().failDigiLocker)
-    return fail('DigiLocker could not be reached. Try again or upload documents instead.');
+    return fail('DigiLocker could not be reached. Please try again.');
 
   return ok(resolveAccount(identity).digiLocker);
-}
-
-export async function uploadKycDocuments(documents = []) {
-  await wait(1.2);
-  if (getKycTestConfig().failDocumentUpload)
-    return fail('Upload failed. Please check the files and try again.');
-  if (!documents.length) return fail('Add all required documents to continue.');
-
-  return ok({ documents: mockUploadedDocuments, uploaded: documents.length });
 }
 
 // ─── Step — edit the fetched profile fields ──────────────────────────────────
 export async function updatePersonalDetails(details) {
   await wait(0.6);
+  const fullName = (details?.fullName ?? '').trim();
+
+  if ('fullName' in (details || {}) && !INDIAN_NAME_REGEX.test(fullName))
+    return fail('Enter your name as it appears on your PAN.');
   if (getKycTestConfig().failPersonalDetailsUpdate)
     return fail('We could not save your changes. Please try again.');
 
@@ -208,21 +289,54 @@ export async function updatePersonalDetails(details) {
 }
 
 // ─── Step — nominee ──────────────────────────────────────────────────────────
-export async function saveNominee({ nominees = [], optOut = false }) {
+export async function saveNominee({
+  nominees = [],
+  optOut = false,
+  optOutAcknowledged = false,
+  statementPreferences = [],
+}) {
   await wait();
   if (getKycTestConfig().failNominee)
     return fail('We could not save the nomination. Please try again.');
 
-  if (optOut) return ok({ nominees: [], optOut: true });
+  if (optOut) {
+    // Opting out is only valid with the Annexure-B declaration accepted.
+    if (!optOutAcknowledged)
+      return fail('Accept the opt-out declaration to continue without a nominee.');
+    return ok({ nominees: [], optOut: true, optOutAcknowledged: true, statementPreferences: [] });
+  }
 
   if (!nominees.length) return fail('Add a nominee or choose to opt out.');
+  if (nominees.length > MAX_NOMINEES)
+    return fail(`You can add up to ${MAX_NOMINEES} nominees.`);
 
-  // A single nominee holds the whole account.
+  const incomplete = nominees.some(
+    (nominee) => !nominee.name?.trim() || !nominee.relationship || !nominee.dateOfBirth
+  );
+  if (incomplete) return fail('Complete every nominee before continuing.');
+
+  const total = nominees.reduce((sum, nominee) => sum + Number(nominee.sharePercentage || 0), 0);
+  if (total !== 100) return fail(`Nominee shares must add up to 100% (currently ${total}%).`);
+
+  // One or both boxes may be ticked, but not neither.
+  const preferences = statementPreferences.filter((id) =>
+    NOMINEE_STATEMENT_OPTIONS.some((option) => option.id === id)
+  );
+  if (!preferences.length)
+    return fail('Choose what should be printed in your account holding statements.');
+
   return ok({
-    nominees: nominees.map((nominee) => ({ ...nominee, sharePercentage: '100' })),
+    nominees: nominees.map((nominee) => ({
+      ...nominee,
+      name: nominee.name.trim(),
+      sharePercentage: String(nominee.sharePercentage),
+    })),
     optOut: false,
+    optOutAcknowledged: false,
+    statementPreferences: preferences,
   });
 }
+
 
 // ─── Step — consent ──────────────────────────────────────────────────────────
 export async function saveConsent({ accepted = [] }) {
@@ -238,20 +352,23 @@ export async function saveConsent({ accepted = [] }) {
   return ok({ accepted, recordedAt: 'Captured during onboarding' });
 }
 
-// ─── Step 6 — PAN ────────────────────────────────────────────────────────────
-export async function verifyPan(pan, identity) {
+// ─── Step 9 — PAN ────────────────────────────────────────────────────────────
+// The PAN is never typed in this journey: it is fetched against the verified
+// mobile/email (an existing KYC record wins when there is one).
+export async function fetchPanDetails(identity, { existingPan } = {}) {
   await wait(1.2);
-  const value = (pan || '').toUpperCase().trim();
-
-  if (!value) return fail('Enter your PAN number to continue.');
-  if (!PAN_REGEX.test(value)) return fail('Enter a valid PAN (e.g. ABCDE1234F).');
   if (getKycTestConfig().failPan)
-    return fail('We could not verify this PAN. Check the number and try again.');
+    return fail('We could not fetch your PAN details right now. Please try again.');
 
-  return ok({ ...resolveAccount(identity).panDetails, pan: value });
+  const account = resolveAccount(identity);
+  const pan = (existingPan || account.panDetails.pan || '').toUpperCase();
+  if (!PAN_REGEX.test(pan))
+    return fail('No PAN is linked to these details. Contact support to continue.');
+
+  return ok({ ...account.panDetails, pan, fetched: true });
 }
 
-// ─── Step 7 — "fetch details" simulation ─────────────────────────────────────
+// ─── Step 10 — "fetch details" simulation ────────────────────────────────────
 /**
  * Simulated staged fetch. `onStage(stageId, status)` is called with
  * status 'loading' | 'done' so the UI can animate each stage.
@@ -273,10 +390,19 @@ export async function fetchGovernmentDetails({ onStage, identity } = {}) {
   }
 
   const account = resolveAccount(identity);
+  // Government records carry identity data only. With no KYC record on file
+  // there is nothing to fall back on for the profile fields, so they come back
+  // blank and the applicant fills them in on the profile step.
+  const personalDetails = hasCompletedKyc(identity)
+    ? account.personalDetails
+    : PROFILE_FIELD_KEYS.reduce(
+        (acc, key) => ({ ...acc, [key]: '' }),
+        { ...account.personalDetails }
+      );
 
   return ok({
     panDetails: account.panDetails,
-    personalDetails: account.personalDetails,
+    personalDetails,
     bankDetails: account.bankDetails,
   });
 }
@@ -385,9 +511,13 @@ export async function submitSelfie() {
   return ok({ selfieVerified: true });
 }
 
-export async function submitSignature() {
+export async function submitSignature({ drawn, uploaded } = {}) {
   await wait(0.8);
-  return ok({ signatureCaptured: true });
+  // Both are mandatory: the drawn signature and the uploaded image of it.
+  if (!drawn) return fail('Draw your signature before submitting.');
+  if (!uploaded?.dataUrl) return fail('Upload an image of your signature as well.');
+
+  return ok({ signatureCaptured: true, signatureUploaded: true });
 }
 
 // ─── Step 15 — final document ────────────────────────────────────────────────
@@ -408,7 +538,10 @@ const mockKycService = {
   delay,
   sendOtp,
   verifyOtp,
-  verifyAccount,
+  sendEmailOtp,
+  verifyEmailOtp,
+  setAccountPassword,
+  setMpin,
   verifyAccountWithGoogle,
   getKycStatus,
   fetchExistingKyc,
@@ -416,11 +549,10 @@ const mockKycService = {
   verifyDigiLockerOtp,
   verifyDigiLockerPin,
   fetchDigiLockerDetails,
-  uploadKycDocuments,
   updatePersonalDetails,
   saveNominee,
   saveConsent,
-  verifyPan,
+  fetchPanDetails,
   fetchGovernmentDetails,
   verifyBankAccount,
   payAccountOpeningFee,

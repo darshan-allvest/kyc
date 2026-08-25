@@ -23,7 +23,8 @@ const initialStatuses = () =>
  * Step 7 — simulated staged fetch of PAN, personal and bank details.
  */
 export default function GovernmentDataFetchStep() {
-  const { goToStep, updateFlow, panVerified, accountId, mobileNumber, account } = useKycFlow();
+  const { goToStep, updateFlow, panVerified, kycCompleted, accountId, mobileNumber, account } =
+    useKycFlow();
   const [statuses, setStatuses] = useState(initialStatuses);
   const [error, setError] = useState('');
   const [running, setRunning] = useState(false);
@@ -54,8 +55,10 @@ export default function GovernmentDataFetchStep() {
       personalDetails: result.data.personalDetails,
       bankDetails: result.data.bankDetails,
     });
-    goToStep(KYC_STEP.CONFIRM_DETAILS);
-  }, [goToStep, updateFlow, accountId, mobileNumber, account?.email]);
+    // Without a KYC record on file the profile fields are not in the fetched
+    // data, so the applicant fills them in before Confirm Details.
+    goToStep(kycCompleted ? KYC_STEP.CONFIRM_DETAILS : KYC_STEP.PROFILE_DETAILS);
+  }, [goToStep, updateFlow, kycCompleted, accountId, mobileNumber, account?.email]);
 
   useEffect(() => {
     let active = true;

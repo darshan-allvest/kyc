@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Camera, CheckCircle2 } from 'lucide-react';
+import { Camera, CheckCircle2, ScanFace } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Button from '@/components/common/button/Button';
 import Text from '@/components/common/Text';
@@ -12,6 +12,7 @@ import KycDemoHint from '@/components/kyc/KycDemoHint';
 import { KYC_STEP, KYC_TYPO, PERMISSION_STATE } from '@/constants/kycConstants';
 import { submitSelfie } from '@/services/kyc/mockKycService';
 import useKycCamera from '@/hooks/kyc/useKycCamera';
+import useFaceCheck, { FACE_STATUS } from '@/hooks/kyc/useFaceCheck';
 import useKycFlow from '@/hooks/kyc/useKycFlow';
 
 const INSTRUCTIONS = [
@@ -37,7 +38,14 @@ export default function SelfieVerificationStep() {
   const isBlocked =
     permission === PERMISSION_STATE.DENIED || permission === PERMISSION_STATE.UNAVAILABLE;
 
+  // A selfie can only be taken once a single, well-framed face is in view.
+  const { status: faceStatus, message: faceMessage, isFaceReady } = useFaceCheck(videoRef, {
+    active: isLive && !isMock,
+    bypass: isMock,
+  });
+
   const handleCapture = () => {
+    if (!isFaceReady) return;
     const image = capture();
     if (!image) return;
     setPreview(image);
@@ -123,12 +131,41 @@ export default function SelfieVerificationStep() {
           </div>
         )}
 
-        {/* Face guide */}
+        {/* Face guide — turns solid once the face passes the check */}
         {isLive && !isMock && (
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute left-1/2 top-1/2 size-[68%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border-2 border-dashed border-brand-500/70"
+            className={cn(
+              'pointer-events-none absolute left-1/2 top-1/2 size-[68%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border-2',
+              isFaceReady
+                ? 'border-solid border-brand-500'
+                : 'border-dashed border-white/50'
+            )}
           />
+        )}
+
+        {/* Live face-check verdict */}
+        {isLive && !isMock && (
+          <div className="pointer-events-none absolute inset-x-2 bottom-2 flex justify-center">
+            <span
+              className={cn(
+                'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-center backdrop-blur',
+                isFaceReady ? 'bg-brand-500/20' : 'bg-black/60'
+              )}
+            >
+              {isFaceReady ? (
+                <CheckCircle2 className="size-3.5 shrink-0 text-brand-500" aria-hidden="true" />
+              ) : (
+                <ScanFace className="size-3.5 shrink-0 text-white/80" aria-hidden="true" />
+              )}
+              <Text
+                className={KYC_TYPO.body}
+                color={isFaceReady ? 'text-brand-500' : 'text-white'}
+              >
+                {faceMessage}
+              </Text>
+            </span>
+          </div>
         )}
       </div>
 
@@ -165,17 +202,33 @@ export default function SelfieVerificationStep() {
             </Button>
           </div>
         ) : isLive ? (
-          <Button
-            variant="authSubmit"
-            size="lg"
-            fullWidth
-            weight="bold"
-            leftIcon={Camera}
-            className="text-[14px]"
-            onClick={handleCapture}
-          >
-            Take Selfie
-          </Button>
+          <>
+            <Button
+              variant="authSubmit"
+              size="lg"
+              fullWidth
+              weight="bold"
+              leftIcon={Camera}
+              disabled={!isFaceReady}
+              className="text-[14px]"
+              onClick={handleCapture}
+            >
+              Take Selfie
+            </Button>
+            {!isFaceReady && (
+              <Text
+                className={cn(KYC_TYPO.body, 'mt-2')}
+                align="center"
+                color={
+                  faceStatus === FACE_STATUS.SEARCHING
+                    ? 'text-gray-500 dark:text-homepage-darkGrey'
+                    : 'text-brandRed-loss'
+                }
+              >
+                {faceMessage}
+              </Text>
+            )}
+          </>
         ) : (
           <Button
             variant="authSubmit"

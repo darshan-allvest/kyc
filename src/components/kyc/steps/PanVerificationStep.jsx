@@ -1,19 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Spinner from '@/components/ui/Spinner';
 import Button from '@/components/common/button/Button';
 import Text from '@/components/common/Text';
 import KycLayout from '@/components/kyc/KycLayout';
 import KycTextField from '@/components/kyc/KycTextField';
+import KycAlert from '@/components/kyc/KycAlert';
 import KycDemoHint from '@/components/kyc/KycDemoHint';
 import { KYC_STEP, KYC_TYPO } from '@/constants/kycConstants';
-import { verifyPan } from '@/services/kyc/mockKycService';
-import { resolveAccount } from '@/services/kyc/mockKycData';
+import { fetchPanDetails } from '@/services/kyc/mockKycService';
 import useKycFlow from '@/hooks/kyc/useKycFlow';
 
 /**
- * Step 6 — PAN verification (simulated; no PAN service is called).
+ * Step — PAN. The PAN is fetched against the verified mobile/email (simulated;
+ * no PAN service is called) and fills the field read-only: there is nothing to
+ * type here, exactly as an existing KYC record already pre-filled it.
  */
 export default function PanVerificationStep() {
   const {
@@ -24,38 +26,21 @@ export default function PanVerificationStep() {
     accountId,
     mobileNumber,
     account,
+    panDetails,
   } = useKycFlow();
 
-  // Only an existing KYC record can pre-fill the PAN — DigiLocker comes later
-  // in the journey now.
-  const prefilled = existingKyc?.pan ? { pan: existingKyc.pan } : null;
-  const demoPan = resolveAccount({ accountId, mobile: mobileNumber, email: account?.email })
-    .panDetails.pan;
-  const [pan, setPan] = useState(prefilled?.pan || '');
-  const [edited, setEdited] = useState(false);
-
-  // The prefill can land after this screen mounts (DigiLocker resolving, an
-  // existing record arriving), so adopt it as long as the applicant has not
-  // started typing their own.
-  useEffect(() => {
-    if (edited || !prefilled?.pan || pan) return undefined;
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) setPan(prefilled.pan);
-    });
-    return () => {
-      active = false;
-    };
-  }, [edited, pan, prefilled?.pan]);
+  const [pan, setPan] = useState(panDetails?.pan || '');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!panDetails?.pan);
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const fetchPan = useCallback(async () => {
     setError('');
     setLoading(true);
 
-    const result = await verifyPan(pan, { accountId, mobile: mobileNumber, email: account?.email });
+    const result = await fetchPanDetails(
+      { accountId, mobile: mobileNumber, email: account?.email },
+      { existingPan: existingKyc?.pan }
+    );
     setLoading(false);
 
     if (!result.success) {
@@ -63,13 +48,29 @@ export default function PanVerificationStep() {
       return;
     }
 
+    setPan(result.data.pan);
     updateFlow({ panVerified: true, panDetails: result.data });
-    // With a record on file the details can be fetched straight away; a new
-    // applicant first chooses how to share documents.
-    goToStep(kycCompleted ? KYC_STEP.GOVERNMENT_FETCH : KYC_STEP.METHOD_CHOICE);
-  };
+  }, [accountId, mobileNumber, account?.email, existingKyc?.pan, updateFlow]);
 
-  const backStep = KYC_STEP.ACCOUNT;
+  useEffect(() => {
+    if (pan) return undefined;
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) fetchPan();
+    });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchPan]);
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (!pan) return;
+    // With a record on file the details can be fetched straight away; a new
+    // applicant shares documents through DigiLocker.
+    goToStep(kycCompleted ? KYC_STEP.GOVERNMENT_FETCH : KYC_STEP.DIGILOCKER);
+  };
 
   return (
     <KycLayout
@@ -77,39 +78,42 @@ export default function PanVerificationStep() {
       subtitle="Please provide your basic information to complete KYC."
       showStepper
       currentStep={KYC_STEP.PAN}
-      onBack={loading ? undefined : () => goToStep(backStep)}
+      onBack={loading ? undefined : () => goToStep(KYC_STEP.MPIN)}
     >
       <form onSubmit={handleSubmit} noValidate>
         <KycTextField
           label="PAN number"
-          placeholder="Enter PAN number"
-          autoFocus
+          placeholder={loading ? 'Fetching PAN...' : 'PAN number'}
           autoComplete="off"
           spellCheck={false}
-          maxLength={10}
+          readOnly
+          aria-readonly="true"
+          tabIndex={-1}
           required
           value={pan}
-          error={error}
-          hint="Enter your 10-character PAN number (e.g. ABCDE1234F)"
-          className="uppercase tracking-[0.15em]"
-          onChange={(event) => {
-            setEdited(true);
-            setPan(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10));
-            if (error) setError('');
-          }}
+          hint="Fetched from your verified mobile number and email — no typing needed."
+          className="cursor-default uppercase tracking-[0.15em] focus:border-homepage-borderColor focus:ring-0"
+          onChange={() => {}}
         />
 
+        {error && (
+          <KycAlert tone="error" className="mt-3">
+            {error}
+          </KycAlert>
+        )}
+
         <Button
-          type="submit"
+          type={error ? 'button' : 'submit'}
           variant="authSubmit"
           size="lg"
           fullWidth
           weight="bold"
           loading={loading}
-          disabled={!pan}
+          disabled={!error && !pan}
           className="mt-5 text-[14px]"
+          onClick={error ? fetchPan : undefined}
         >
-          {loading ? 'Verifying...' : 'Submit & Continue'}
+          {loading ? 'Fetching...' : error ? 'Try again' : 'Submit & Continue'}
         </Button>
       </form>
 
@@ -117,20 +121,14 @@ export default function PanVerificationStep() {
         <div className="mt-4 flex items-center gap-2" role="status" aria-live="polite">
           <Spinner className="size-4 text-brand-500" />
           <Text className={KYC_TYPO.body} color="text-gray-600 dark:text-homepage-lightWhite">
-            Verifying your PAN details...
+            Fetching your PAN details...
           </Text>
         </div>
       )}
 
-      {prefilled ? (
-        <KycDemoHint className="mt-5">
-          Simulated verification — nothing leaves your browser.
-        </KycDemoHint>
-      ) : (
-        <KycDemoHint className="mt-5">
-          Use {demoPan} — simulated verification, nothing leaves your browser.
-        </KycDemoHint>
-      )}
+      <KycDemoHint className="mt-5">
+        Simulated fetch — nothing leaves your browser.
+      </KycDemoHint>
     </KycLayout>
   );
 }

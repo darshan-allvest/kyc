@@ -4,6 +4,10 @@
 import { maskAccountNumber, maskPan, formatMobile } from '@/lib/kyc/kycFormatters';
 import { maskEmail } from '@/utils/textHelpers';
 import {
+  NOMINEE_OPT_OUT_DECLARATION,
+  NOMINEE_STATEMENT_OPTIONS,
+} from '@/constants/kycConstants';
+import {
   TRADING_SEGMENT_DECLARATIONS,
   mockConsents,
   mockDeclarations,
@@ -27,6 +31,8 @@ export function buildKycDocument(flow) {
     payment,
     nominees: rawNominees,
     nomineeOptOut,
+    nomineeOptOutAcknowledged,
+    nomineeStatementPreferences,
     consents: rawConsents,
     runningAccountSettlement,
   } = flow;
@@ -125,13 +131,30 @@ export function buildKycDocument(flow) {
     id: 'nominee',
     title: 'Nomination',
     rows: nomineeOptOut
-      ? [['Nomination', 'Opted out — declaration recorded']]
+      ? [
+          ['Nomination', 'Opted out'],
+          [
+            NOMINEE_OPT_OUT_DECLARATION.title,
+            nomineeOptOutAcknowledged ? 'Accepted' : 'Not accepted',
+          ],
+        ]
       : nominees.length
-        ? nominees.flatMap((nominee) => [
-            ['Nominee', nominee.name],
-            ['Relationship', nominee.relationship],
-            ['Date of birth', nominee.dateOfBirth],
-          ])
+        ? [
+            ...nominees.flatMap((nominee, index) => [
+              [`Nominee ${index + 1}`, nominee.name],
+              ['Relationship', nominee.relationship],
+              ['Date of birth', nominee.dateOfBirth],
+              ['Share of holdings', `${nominee.sharePercentage}%`],
+            ]),
+            [
+              'Printed in holding statements',
+              NOMINEE_STATEMENT_OPTIONS.filter((option) =>
+                (nomineeStatementPreferences ?? []).includes(option.id)
+              )
+                .map((option) => option.label)
+                .join('; ') || 'Not selected',
+            ],
+          ]
         : [['Nomination', 'Not provided']],
   });
 
@@ -146,14 +169,21 @@ export function buildKycDocument(flow) {
     });
   }
 
-  if (flow.aadhaarEsign) {
+  if (flow.aadhaarEsign || flow.signatureUpload) {
     sections.push({
       id: 'esign',
       title: 'Aadhaar e-sign',
       rows: [
-        ['Provider', flow.aadhaarEsign.esp],
-        ['Signature reference', flow.aadhaarEsign.reference],
-        ['Signed', flow.aadhaarEsign.signedAt || '-'],
+        ...(flow.aadhaarEsign
+          ? [
+              ['Provider', flow.aadhaarEsign.esp],
+              ['Signature reference', flow.aadhaarEsign.reference],
+              ['Signed', flow.aadhaarEsign.signedAt || '-'],
+            ]
+          : []),
+        ...(flow.signatureUpload
+          ? [['Uploaded signature', flow.signatureUpload.fileName]]
+          : []),
       ],
     });
   }
