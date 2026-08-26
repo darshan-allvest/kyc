@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Eraser, Trash2, Upload } from 'lucide-react';
+import { Eraser, PenLine, Trash2, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Button from '@/components/common/button/Button';
 import Text from '@/components/common/Text';
@@ -14,16 +14,21 @@ import useKycFlow from '@/hooks/kyc/useKycFlow';
 
 const formatSize = (bytes) => `${Math.max(1, Math.round(bytes / 1024))} KB`;
 
+const METHOD = { DRAW: 'DRAW', UPLOAD: 'UPLOAD' };
+
 /**
- * Step — signature. Both are required: a signature drawn in the pad and a
- * scanned/photographed signature uploaded from the device. Everything stays in
- * flow state as data URLs; nothing is uploaded anywhere.
+ * Step — signature. One of the two is required: sign in the pad, or upload a
+ * picture of a signature on paper. Everything stays in flow state as data URLs;
+ * nothing is uploaded anywhere.
  */
 export default function SignatureStep() {
-  const { goToStep, updateFlow, signatureUpload } = useKycFlow();
+  const { goToStep, updateFlow, signature, signatureUpload } = useKycFlow();
   const padRef = useRef(null);
   const fileInputRef = useRef(null);
+  const [method, setMethod] = useState(signatureUpload ? METHOD.UPLOAD : METHOD.DRAW);
   const [hasInk, setHasInk] = useState(false);
+  // Coming back shows the signature already captured; drawing again replaces it.
+  const [savedDrawing, setSavedDrawing] = useState(signatureUpload ? null : signature);
   const [upload, setUpload] = useState(signatureUpload || null);
   const [uploadError, setUploadError] = useState('');
   const [error, setError] = useState('');
@@ -31,6 +36,7 @@ export default function SignatureStep() {
 
   const handleClear = () => {
     padRef.current?.clear();
+    setSavedDrawing(null);
     setError('');
   };
 
@@ -58,21 +64,27 @@ export default function SignatureStep() {
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = async () => {
-    const drawn = padRef.current?.isEmpty() ? null : padRef.current?.toDataURL();
+  const isDrawing = method === METHOD.DRAW;
+  const ready = isDrawing ? hasInk || Boolean(savedDrawing) : Boolean(upload);
 
-    if (!drawn) {
+  const handleSubmit = async () => {
+    const drawn = isDrawing
+      ? (!padRef.current?.isEmpty() ? padRef.current?.toDataURL() : savedDrawing)
+      : null;
+    const uploaded = isDrawing ? null : upload;
+
+    if (isDrawing && !drawn) {
       setError('Draw your signature before submitting.');
       return;
     }
-    if (!upload) {
-      setError('Upload an image of your signature as well.');
+    if (!isDrawing && !uploaded) {
+      setError('Upload an image of your signature to continue.');
       return;
     }
 
     setError('');
     setSubmitting(true);
-    const result = await submitSignature({ drawn, uploaded: upload });
+    const result = await submitSignature({ drawn, uploaded });
     setSubmitting(false);
 
     if (!result.success) {
@@ -80,30 +92,92 @@ export default function SignatureStep() {
       return;
     }
 
-    updateFlow({ signature: drawn, signatureUpload: upload });
+    // Whichever way it was captured, `signature` is what the document renders.
+    updateFlow({
+      signature: drawn ?? uploaded.dataUrl,
+      signatureUpload: uploaded,
+    });
     goToStep(KYC_STEP.DOCUMENT);
   };
 
   return (
     <KycLayout
       title="Add your signature"
-      subtitle="Sign inside the box and upload a picture of your signature — both are required."
+      subtitle="Sign it here, or upload a picture of your signature on paper."
       showStepper
       currentStep={KYC_STEP.SIGNATURE}
       onBack={() => goToStep(KYC_STEP.SELFIE)}
     >
-      <Text className={cn(KYC_TYPO.label, 'mb-1.5')} color="text-gray-700 dark:text-white">
-        Draw your signature
-        <span className="ml-0.5 text-brandRed-loss" aria-hidden="true">
-          *
-        </span>
-      </Text>
+      <fieldset className="mb-4">
+        <legend className="sr-only">How would you like to sign?</legend>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { id: METHOD.DRAW, label: 'Sign here', icon: PenLine },
+            { id: METHOD.UPLOAD, label: 'Upload signature', icon: Upload },
+          ].map((option) => {
+            const Icon = option.icon;
+            const isSelected = method === option.id;
+            return (
+              <label
+                key={option.id}
+                className={cn(
+                  'flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2.5 transition-colors',
+                  isSelected
+                    ? 'border-brand-500 bg-brand-500/5 dark:bg-brand-shade'
+                    : 'border-gray-200 dark:border-white/10'
+                )}
+              >
+                <input
+                  type="radio"
+                  name="signatureMethod"
+                  value={option.id}
+                  checked={isSelected}
+                  onChange={() => {
+                    setMethod(option.id);
+                    setError('');
+                    setUploadError('');
+                  }}
+                  className="sr-only"
+                />
+                <Icon
+                  className={cn('size-4 shrink-0', isSelected ? 'text-brand-500' : 'text-gray-500')}
+                  aria-hidden="true"
+                />
+                <Text as="span" className={KYC_TYPO.body} weight={isSelected ? 'semibold' : 'normal'}>
+                  {option.label}
+                </Text>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      {isDrawing && (
+        <>
+      {savedDrawing && !hasInk && (
+        <div className="mb-3 rounded-xl border border-gray-200 p-3 dark:border-white/10 dark:bg-black/20">
+          <div className="flex h-24 items-center justify-center overflow-hidden rounded-lg bg-white">
+            {/* Local data URL — next/image would add no value here. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={savedDrawing}
+              alt="The signature you already added"
+              className="max-h-full max-w-full object-contain"
+            />
+          </div>
+          <Text className={cn(KYC_TYPO.body, 'mt-2')} color="text-gray-600 dark:text-homepage-softGray">
+            Your saved signature — sign in the box below to replace it.
+          </Text>
+        </div>
+      )}
 
       <SignaturePad ref={padRef} onChange={setHasInk} height={200} />
 
       <div className="mt-2 flex items-center justify-between gap-2">
         <Text className={KYC_TYPO.body} color="text-gray-500 dark:text-homepage-darkGrey">
-          {hasInk ? 'Sign as you would on paper.' : 'The box is empty — draw your signature.'}
+          {hasInk || savedDrawing
+            ? 'Sign as you would on paper.'
+            : 'The box is empty — draw your signature.'}
         </Text>
         <button
           type="button"
@@ -115,15 +189,12 @@ export default function SignatureStep() {
         </button>
       </div>
 
-      {/* Uploaded signature */}
-      <div className="mt-5">
-        <Text className={cn(KYC_TYPO.label, 'mb-1.5')} color="text-gray-700 dark:text-white">
-          Upload your signature
-          <span className="ml-0.5 text-brandRed-loss" aria-hidden="true">
-            *
-          </span>
-        </Text>
+        </>
+      )}
 
+      {/* Uploaded signature */}
+      {!isDrawing && (
+      <div>
         <input
           ref={fileInputRef}
           type="file"
@@ -188,6 +259,7 @@ export default function SignatureStep() {
           </KycAlert>
         )}
       </div>
+      )}
 
       {error && (
         <KycAlert tone="error" className="mt-3">
@@ -201,24 +273,22 @@ export default function SignatureStep() {
         fullWidth
         weight="bold"
         loading={submitting}
-        disabled={!hasInk || !upload}
+        disabled={!ready}
         className={cn('mt-5 text-[14px]')}
         onClick={handleSubmit}
       >
         {submitting ? 'Saving signature...' : 'Submit Signature'}
       </Button>
 
-      {(!hasInk || !upload) && !error && (
+      {!ready && !error && (
         <Text
           className={cn(KYC_TYPO.body, 'mt-2')}
           align="center"
           color="text-gray-500 dark:text-homepage-darkGrey"
         >
-          {!hasInk && !upload
-            ? 'Draw your signature and upload an image to continue.'
-            : !hasInk
-              ? 'Draw your signature to continue.'
-              : 'Upload an image of your signature to continue.'}
+          {isDrawing
+            ? 'Draw your signature to continue.'
+            : 'Upload an image of your signature to continue.'}
         </Text>
       )}
     </KycLayout>

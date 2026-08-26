@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronUp, ScrollText } from 'lucide-react';
+import { ChevronUp, Download, ScrollText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Button from '@/components/common/button/Button';
 import Text from '@/components/common/Text';
@@ -10,9 +10,11 @@ import KycLayout from '@/components/kyc/KycLayout';
 import KycAlert from '@/components/kyc/KycAlert';
 import DocumentPreview from '@/components/kyc/DocumentPreview';
 import DocumentCover from '@/components/kyc/DocumentCover';
+import KraFormPages from '@/components/kyc/KraFormPages';
 import { KYC_STEP, KYC_TYPO } from '@/constants/kycConstants';
 import { generateFinalDocument } from '@/services/kyc/mockKycService';
 import { buildKycDocument } from '@/lib/kyc/buildKycDocument';
+import { downloadKycPdf, KRA_FORM } from '@/lib/kyc/downloadKycPdf';
 import useKycFlow from '@/hooks/kyc/useKycFlow';
 
 /**
@@ -26,6 +28,8 @@ export default function DocumentPreviewStep() {
   const [error, setError] = useState('');
   // The document opens on its cover; the long scroll is opt-in.
   const [expanded, setExpanded] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState('');
 
   const document = useMemo(() => buildKycDocument(flow), [flow]);
 
@@ -55,6 +59,18 @@ export default function DocumentPreviewStep() {
   }, []);
 
   const handleContinue = () => goToStep(KYC_STEP.AADHAAR_ESIGN);
+
+  const handleDownload = async () => {
+    setDownloadError('');
+    setDownloading(true);
+    try {
+      await downloadKycPdf(document, { signature, selfie });
+    } catch {
+      setDownloadError('We could not build the PDF. Please try again.');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   if (preparing) {
     return (
@@ -121,7 +137,12 @@ export default function DocumentPreviewStep() {
     >
       {expanded ? (
         <>
-          <DocumentPreview document={document} signature={signature} selfie={selfie} />
+          <DocumentPreview
+            document={document}
+            signature={signature}
+            selfie={selfie}
+            leading={<KraFormPages />}
+          />
           <Button
             size="sm"
             variant="ghost"
@@ -149,8 +170,29 @@ export default function DocumentPreviewStep() {
         </>
       )}
 
+      <Button
+        variant="outline"
+        size="lg"
+        fullWidth
+        weight="semibold"
+        leftIcon={Download}
+        loading={downloading}
+        className="mt-2 text-[14px]"
+        onClick={handleDownload}
+      >
+        {downloading ? 'Preparing PDF...' : 'Download document'}
+      </Button>
+
+      {downloadError && (
+        <KycAlert tone="error" className="mt-3">
+          {downloadError}
+        </KycAlert>
+      )}
+
       <Text className={cn(KYC_TYPO.body, 'mt-3')} color="text-gray-500 dark:text-homepage-darkGrey">
-        This document is assembled in your browser — no backend is involved.
+        The download includes your form plus the first {KRA_FORM.pageCount} pages of the
+        CVL KRA KYC form. Everything is assembled in your browser — no backend is
+        involved.
       </Text>
     </KycLayout>
   );

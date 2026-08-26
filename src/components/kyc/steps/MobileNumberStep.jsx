@@ -16,12 +16,13 @@ import useKycFlow from '@/hooks/kyc/useKycFlow';
  * Step 1 — mobile number. Sends a (mock) OTP and moves to verification.
  */
 export default function MobileNumberStep() {
-  const { goToStep, updateFlow, mobileNumber } = useKycFlow();
+  const { goToStep, updateFlow, mobileNumber, termsAccepted, entityTermsAccepted } =
+    useKycFlow();
   const [value, setValue] = useState(mobileNumber || '');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [acceptedEntities, setAcceptedEntities] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(Boolean(termsAccepted));
+  const [acceptedEntities, setAcceptedEntities] = useState(Boolean(entityTermsAccepted));
 
   const consentGiven = acceptedTerms && acceptedEntities;
 
@@ -39,7 +40,12 @@ export default function MobileNumberStep() {
       return;
     }
 
-    updateFlow({ mobileNumber: result.data.mobile, accountId: result.data.accountId });
+    updateFlow({
+      mobileNumber: result.data.mobile,
+      accountId: result.data.accountId,
+      termsAccepted: acceptedTerms,
+      entityTermsAccepted: acceptedEntities,
+    });
     goToStep(KYC_STEP.OTP);
   };
 

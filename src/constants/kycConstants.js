@@ -11,6 +11,7 @@ export const KYC_STEP = Object.freeze({
   EMAIL_OTP: 'EMAIL_OTP',
   PASSWORD: 'PASSWORD',
   MPIN: 'MPIN',
+  MPIN_VERIFY: 'MPIN_VERIFY',
   KYC_STATUS: 'KYC_STATUS',
   DIGILOCKER: 'DIGILOCKER',
   // The PAN screen *is* the "Basic Details" milestone: PAN is the only thing
@@ -52,6 +53,7 @@ export const STEP_TO_STEPPER_KEY = Object.freeze({
   [KYC_STEP.EMAIL_OTP]: 'BASIC',
   [KYC_STEP.PASSWORD]: 'BASIC',
   [KYC_STEP.MPIN]: 'BASIC',
+  [KYC_STEP.MPIN_VERIFY]: 'BASIC',
   [KYC_STEP.KYC_STATUS]: 'BASIC',
   [KYC_STEP.PAN]: 'BASIC',
   [KYC_STEP.DIGILOCKER]: 'PAN',

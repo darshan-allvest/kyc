@@ -45,6 +45,7 @@ const TOGGLE_GROUPS = [
       { key: 'failNominee', label: 'Nominee save fails' },
       { key: 'failConsent', label: 'Consent save fails' },
       { key: 'bankNameMismatch', label: 'Bank account name mismatch' },
+      { key: 'failBankStatement', label: 'Bank statement fetch fails' },
       { key: 'failBankVerification', label: 'Bank verification fails' },
       { key: 'failPayment', label: 'Payment fails' },
       { key: 'failEsign', label: 'E-Sign verification fails' },

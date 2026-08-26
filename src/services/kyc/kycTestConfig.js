@@ -33,6 +33,7 @@ export const DEFAULT_KYC_TEST_CONFIG = {
   failNominee: false, // saving the nomination fails
   failConsent: false, // recording consent fails
   failBankVerification: false, // ₹1 penny-drop verification fails
+  failBankStatement: false, // bank statement fetch fails
   bankNameMismatch: false, // bank holder name ≠ PAN name
   failPayment: false, // account-opening payment fails
   failEsign: false, // e-sign verification fails

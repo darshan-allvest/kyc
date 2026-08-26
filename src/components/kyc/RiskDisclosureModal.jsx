@@ -83,7 +83,16 @@ export default function RiskDisclosureModal({ open, onAccept, onDecline }) {
       </ul>
 
       <Text className={cn(KYC_TYPO.body, 'mt-4')} color="text-homepage-darkGrey">
-        {mockRiskDisclosure.reference}
+        {mockRiskDisclosure.reference.prefix}
+        <a
+          href={mockRiskDisclosure.reference.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-brand-500 underline underline-offset-2 hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+        >
+          {mockRiskDisclosure.reference.linkLabel}
+        </a>
+        {mockRiskDisclosure.reference.suffix}
       </Text>
 
       <Checkbox
@@ -91,7 +100,7 @@ export default function RiskDisclosureModal({ open, onAccept, onDecline }) {
         onChange={setAcknowledged}
         className="mt-4 w-full items-start"
         boxClassName="mt-0.5"
-        label="I have read and understood the Risk Disclosure Document for derivatives"
+        label={mockRiskDisclosure.acknowledgement}
         labelProps={{ className: KYC_TYPO.body }}
       />
     </CommonModal>

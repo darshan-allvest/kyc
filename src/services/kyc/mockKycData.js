@@ -244,7 +244,7 @@ export const TRADING_SEGMENT_DECLARATIONS = [
   // Derivative segments are opt-in, like F&O.
   { id: 'commodity', label: 'Commodities', defaultChecked: false },
   { id: 'currency', label: 'Currency Derivatives', defaultChecked: false },
-  { id: 'debt', label: 'Debt', defaultChecked: false },
+  { id: 'debt', label: 'Debt Instrument', defaultChecked: false },
 ];
 
 // The declaration block on the Confirm Details screen. `required: true` items
@@ -272,7 +272,14 @@ export const mockDeclarations = [
     required: false,
     text: 'I Accept DDPI',
     detail:
-      'Demat Debit and Pledge Instruction lets us debit only the securities you sell or pledge, so you do not need a TPIN for every trade. You can trade without it.',
+      'Demat Debit and Pledge Instruction lets us debit only the securities you sell or pledge, so you do not need a TPIN for every trade. It is used for these purposes only:',
+    // The four DDPI purposes permitted by the depositories.
+    detailPoints: [
+      'Transfer of securities held in the beneficial owner accounts of the client towards Stock Exchange related deliveries / settlement obligations arising out of trades executed by clients on the Stock Exchange through the same stock broker.',
+      'Pledging / re-pledging of securities in favour of trading member (TM) / clearing member (CM) for the purpose of meeting margin requirements of the clients in connection with the trades executed by the clients on the Stock Exchange.',
+      'Mutual Fund transactions being executed on stock exchange order entry platforms.',
+      'Tendering shares in open offers through Stock Exchange platforms.',
+    ],
   },
   {
     id: 'bseStar',
@@ -299,16 +306,25 @@ export const mockDeclarations = [
 
 // Shown after F&O is activated, before the segment is confirmed.
 export const mockRiskDisclosure = {
-  title: 'Risk disclosure for derivatives',
+  title: 'Risk Disclosure on Derivatives',
   summary:
-    'Futures and Options are leveraged products. Losses can exceed your invested amount and build up quickly.',
+    '9 out of 10 individual traders in equity Futures and Options segment, incurred net losses.',
   points: [
-    '9 out of 10 individual traders in equity F&O incur net losses (SEBI study).',
-    'Leverage magnifies both gains and losses — a small move can wipe out margin.',
-    'Positions may be squared off by the broker if margin falls short.',
-    'Trade only with money you can afford to lose, after reading the RDD.',
+    'On an average, loss makers registered net trading loss close to ₹50,000.',
+    'Over and above the net trading losses incurred, loss makers expended an additional 28% of net trading losses as transaction costs.',
+    'Those making net trading profits, incurred between 15% to 50% of such profits as transaction cost.',
   ],
-  reference: 'Full text is included in the Risk Disclosure Document in your application kit.',
+  // The source line links out to the study itself; only the link text is
+  // highlighted, the rest of the sentence stays plain.
+  reference: {
+    prefix: 'Source: ',
+    linkLabel: 'SEBI study',
+    href: 'https://www.sebi.gov.in/reports-and-statistics/research/jan-2023/study-analysis-of-profit-and-loss-of-individual-traders-dealing-in-equity-fando-segment_67525.html?trappable=true',
+    suffix:
+      ' dated January 25, 2023 on “Analysis of Profit and Loss of Individual Traders dealing in equity Futures and Options (F&O) Segment”, wherein Aggregate Level findings are based on annual Profit/Loss incurred by individual traders in equity F&O during FY 2021-22.',
+  },
+  acknowledgement:
+    'I have read and understood the above-mentioned Risk Disclosure and acknowledge the same.',
 };
 
 export const mockFnoOffer = {
@@ -333,6 +349,16 @@ export const mockPayment = {
     { id: 'phonepe', label: 'PhonePe', icon: '/assets/img/PhonePe.svg' },
     { id: 'paytm', label: 'Paytm', icon: '/assets/img/Paytm.svg' },
   ],
+};
+
+// Bank statement pulled on the payment screen — doubles as the income proof
+// SEBI requires before F&O is activated.
+export const mockBankStatement = {
+  period: 'Last 6 months',
+  transactions: 148,
+  averageBalance: '₹1,24,500',
+  highestBalance: '₹3,08,200',
+  incomeProof: 'Bank statement (6 months)',
 };
 
 // The final Aadhaar-OTP e-sign on the account opening form.

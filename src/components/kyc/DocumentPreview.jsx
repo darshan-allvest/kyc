@@ -257,8 +257,11 @@ function SheetChrome({ meta, page, total, children, className, sheetRef }) {
  * DocumentPreview — on-screen version of the generated account-opening form,
  * laid out as A4 sheets. Every block is measured at the real sheet width first,
  * so pages break between rows instead of through them.
+ *
+ * `leading` renders ahead of the generated sheets, for pages that open the
+ * document (the KRA form).
  */
-export default function DocumentPreview({ document, signature, selfie, className }) {
+export default function DocumentPreview({ document, signature, selfie, leading, className }) {
   const { meta } = document;
   const blocks = useMemo(
     () => buildBlocks(document, signature, selfie),
@@ -357,6 +360,8 @@ export default function DocumentPreview({ document, signature, selfie, className
       </div>
 
       <div className="space-y-4">
+        {leading}
+
         {(pages ?? []).map((page, index) => (
           <SheetChrome
             key={page.blocks.map((block) => `${block.id}${block.continued ? '-c' : ''}`).join('-')}

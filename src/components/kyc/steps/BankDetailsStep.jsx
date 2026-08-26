@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
+import Spinner from '@/components/ui/Spinner';
 import Button from '@/components/common/button/Button';
 import Text from '@/components/common/Text';
 import KycLayout from '@/components/kyc/KycLayout';
@@ -18,7 +19,11 @@ import {
   KYC_STEP,
   KYC_TYPO,
 } from '@/constants/kycConstants';
-import { payAccountOpeningFee, verifyBankAccount } from '@/services/kyc/mockKycService';
+import {
+  fetchBankStatement,
+  payAccountOpeningFee,
+  verifyBankAccount,
+} from '@/services/kyc/mockKycService';
 import { mockPayment, resolveAccount } from '@/services/kyc/mockKycData';
 import useKycFlow from '@/hooks/kyc/useKycFlow';
 
@@ -39,6 +44,9 @@ export default function BankDetailsStep() {
     bankDetails,
     submittedBankDetails,
     paymentMethod,
+    segments,
+    fnoSelected,
+    bankStatement,
     accountId,
     mobileNumber,
     account,
@@ -57,20 +65,61 @@ export default function BankDetailsStep() {
       }
     : EMPTY_FORM;
 
-  const [form, setForm] = useState(EMPTY_FORM);
+  // Coming back shows the account that was already submitted.
+  const [form, setForm] = useState(() =>
+    submittedBankDetails?.accountNumber
+      ? {
+          accountNumber: submittedBankDetails.accountNumber,
+          confirmAccountNumber: submittedBankDetails.accountNumber,
+          ifsc: submittedBankDetails.ifsc,
+          accountType: submittedBankDetails.accountType || ACCOUNT_TYPES[0],
+        }
+      : EMPTY_FORM
+  );
+  // Paying by UPI means the payout account is the one already on record, so
+  // this screen has nothing to ask: it verifies that account straight away and
+  // only ever shows the modal. The form appears only if that check fails.
+  const paysFromBank = paymentMethod === 'BANK';
+  const [skipForm, setSkipForm] = useState(
+    !paysFromBank && Boolean(demoBank) && !submittedBankDetails
+  );
   // Offer the account on record first; the applicant reuses it or adds another.
   // Skipped only when they have already been through this screen.
   const [showBankChoice, setShowBankChoice] = useState(
-    Boolean(demoBank) && !submittedBankDetails
+    Boolean(demoBank) && !submittedBankDetails && paysFromBank
   );
   const [errors, setErrors] = useState({});
   const [modalState, setModalState] = useState(null);
   const [modalError, setModalError] = useState('');
   const [verifiedBank, setVerifiedBank] = useState(null);
   const [paymentResult, setPaymentResult] = useState(null);
-  // Paying from a bank account means the ₹1 is debited from the account chosen
-  // here, so the receipt shows once this screen's verification succeeds.
-  const paysFromBank = paymentMethod === 'BANK';
+  // Paying by UPI skips the payment screen's statement fetch, so F&O applicants
+  // are asked for the income proof here, right after the account is verified.
+  const [statement, setStatement] = useState(bankStatement);
+  const [fetchingStatement, setFetchingStatement] = useState(false);
+  const [statementError, setStatementError] = useState('');
+  const needsStatement = Boolean(
+    (fnoSelected || segments?.includes('fno')) && !statement
+  );
+
+  const handleFetchStatement = async () => {
+    setStatementError('');
+    setFetchingStatement(true);
+    const result = await fetchBankStatement(form, {
+      accountId,
+      mobile: mobileNumber,
+      email: account?.email,
+    });
+    setFetchingStatement(false);
+
+    if (!result.success) {
+      setStatementError(result.error);
+      return;
+    }
+
+    setStatement(result.data);
+    updateFlow({ bankStatement: result.data });
+  };
 
   const useRecordedBank = () => {
     setForm(prefilledForm);
@@ -120,9 +169,10 @@ export default function BankDetailsStep() {
     runVerification();
   };
 
-  const runVerification = async () => {
+  const runVerification = useCallback(
+    async (details = form) => {
     setModalState(BANK_MODAL_STATE.VERIFYING);
-    const result = await verifyBankAccount(form, {
+    const result = await verifyBankAccount(details, {
       accountId,
       mobile: mobileNumber,
       email: account?.email,
@@ -150,27 +200,66 @@ export default function BankDetailsStep() {
 
     setPaymentResult({ ...paid.data, currency: mockPayment.currency });
     setModalState(BANK_MODAL_STATE.PAID);
-  };
+    },
+    [form, paysFromBank, accountId, mobileNumber, account?.email]
+  );
+
+  // UPI path: verify the recorded account as soon as the screen opens, so the
+  // applicant only ever sees the modal.
+  useEffect(() => {
+    if (!skipForm || modalState) return undefined;
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+      setForm(prefilledForm);
+      runVerification(prefilledForm);
+    });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skipForm]);
 
   const handleContinue = () => {
     updateFlow({
       submittedBankDetails: verifiedBank,
       bankVerified: true,
       ...(paymentResult ? { payment: paymentResult } : {}),
+      ...(statement ? { bankStatement: statement } : {}),
     });
     setModalState(null);
     goToStep(KYC_STEP.NOMINEE);
   };
 
+  // Skipping the income proof still carries on to the nominee screen.
+  const handleSkipStatement = () => {
+    setStatementError('');
+    updateFlow({ bankStatement: null });
+    handleContinue();
+  };
+
   return (
     <>
       <KycLayout
-        title="Add your bank details"
-        subtitle="Payouts and refunds are sent to this account."
+        title={skipForm ? 'Confirming your bank account' : 'Add your bank details'}
+        subtitle={
+          skipForm
+            ? 'We are verifying the account already on your KYC record.'
+            : 'Payouts and refunds are sent to this account.'
+        }
         showStepper
         currentStep={KYC_STEP.BANK_DETAILS}
-        onBack={() => goToStep(KYC_STEP.PAYMENT)}
+        onBack={skipForm ? undefined : () => goToStep(KYC_STEP.PAYMENT)}
       >
+        {skipForm ? (
+          <div className="flex items-center gap-3 py-6" role="status" aria-live="polite">
+            <Spinner className="size-5 text-brand-500" />
+            <Text className={KYC_TYPO.subtitle} color="text-gray-700 dark:text-homepage-lightWhite">
+              Checking {demoBank.bankName} ···{demoBank.accountNumber.slice(-4)}
+            </Text>
+          </div>
+        ) : (
+          <>
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <KycTextField
             label="Account number"
@@ -266,6 +355,8 @@ export default function BankDetailsStep() {
         <KycDemoHint className="mt-3">
           {demoBank.accountNumber} · {demoBank.ifsc} — nothing is sent to a bank.
         </KycDemoHint>
+          </>
+        )}
       </KycLayout>
 
       <ConfirmBankModal
@@ -283,7 +374,16 @@ export default function BankDetailsStep() {
         error={modalError}
         onRetry={runVerification}
         onContinue={handleContinue}
-        onClose={() => setModalState(null)}
+        onClose={() => {
+          setModalState(null);
+          setSkipForm(false);
+        }}
+        needsStatement={needsStatement}
+        statement={statement}
+        fetchingStatement={fetchingStatement}
+        statementError={statementError}
+        onFetchStatement={handleFetchStatement}
+        onSkipStatement={handleSkipStatement}
       />
     </>
   );

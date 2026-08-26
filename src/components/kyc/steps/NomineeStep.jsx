@@ -415,27 +415,43 @@ export default function NomineeStep() {
                       labelProps={{ className: KYC_TYPO.body }}
                     />
 
-                    {option.id === 'FLAG' && statementPreferences.includes('FLAG') && (
-                      <div className="mt-2 flex items-center gap-2 pl-6">
-                        {NOMINEE_STATEMENT_FLAG_VALUES.map((value) => (
-                          <button
-                            key={value}
-                            type="button"
-                            aria-pressed={statementFlag === value}
-                            onClick={() => {
-                              setStatementFlag(value);
-                              if (error) setError('');
-                            }}
-                            className={cn(
-                              'min-h-11 rounded-full border px-4 text-[12px] font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
-                              statementFlag === value
-                                ? 'border-brand-500 bg-brand-500/15 text-brand-500'
-                                : 'border-gray-300 text-gray-600 dark:border-white/20 dark:text-homepage-softGray'
-                            )}
-                          >
-                            {value}
-                          </button>
-                        ))}
+                    {option.id === 'FLAG' && (
+                      <div className="mt-2 pl-6">
+                        <span
+                          role="group"
+                          aria-label="Whether nomination is given"
+                          className="inline-flex overflow-hidden rounded-lg border border-gray-300 dark:border-white/15"
+                        >
+                          {NOMINEE_STATEMENT_FLAG_VALUES.map((value, valueIndex) => {
+                            const active =
+                              statementPreferences.includes('FLAG') && statementFlag === value;
+                            return (
+                              <button
+                                key={value}
+                                type="button"
+                                aria-pressed={active}
+                                onClick={() => {
+                                  // Answering also ticks the option it belongs to.
+                                  setStatementPreferences((prev) => [
+                                    ...new Set([...prev, 'FLAG']),
+                                  ]);
+                                  setStatementFlag(value);
+                                  if (error) setError('');
+                                }}
+                                className={cn(
+                                  'min-h-10 px-5 text-[12px] font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500',
+                                  valueIndex > 0 &&
+                                    'border-l border-gray-300 dark:border-white/15',
+                                  active
+                                    ? 'bg-brand-500 text-black'
+                                    : 'text-gray-500 hover:text-gray-800 dark:text-homepage-darkGrey dark:hover:text-white'
+                                )}
+                              >
+                                {value}
+                              </button>
+                            );
+                          })}
+                        </span>
                       </div>
                     )}
                   </div>

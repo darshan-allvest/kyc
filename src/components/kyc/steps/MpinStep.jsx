@@ -13,13 +13,14 @@ import { DEMO_MPIN } from '@/services/kyc/mockKycData';
 import useKycFlow from '@/hooks/kyc/useKycFlow';
 
 /**
- * Step 6 — set the 6-digit MPIN used to unlock the app. Neither the MPIN nor
- * its confirmation is kept in flow state once it is set.
+ * Step 6 — set the 6-digit MPIN used to unlock the app. The next screen asks
+ * for it again to confirm it was remembered.
  */
 export default function MpinStep() {
-  const { goToStep, updateFlow, passwordSet } = useKycFlow();
-  const [mpin, setMpinValue] = useState('');
-  const [confirmMpin, setConfirmMpin] = useState('');
+  const { goToStep, updateFlow, passwordSet, mpin: savedMpin } = useKycFlow();
+  // Coming back from the verify screen restores what was set.
+  const [mpin, setMpinValue] = useState(savedMpin || '');
+  const [confirmMpin, setConfirmMpin] = useState(savedMpin || '');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -43,8 +44,8 @@ export default function MpinStep() {
       return;
     }
 
-    updateFlow({ mpinSet: true });
-    goToStep(KYC_STEP.KYC_STATUS);
+    updateFlow({ mpinSet: true, mpin, mpinVerified: false });
+    goToStep(KYC_STEP.MPIN_VERIFY);
   };
 
   // Google sign-in skips the password screen, so back goes where we came from.

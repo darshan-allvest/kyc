@@ -143,12 +143,34 @@ export default function Declaration({
               )}
 
               {declaration.detail && isExpanded && (
-                <Text
-                  className={cn(KYC_TYPO.body, 'mt-1.5 pl-6')}
-                  color="text-gray-600 dark:text-homepage-softGray"
-                >
-                  {declaration.detail}
-                </Text>
+                <div className="mt-1.5 pl-6">
+                  <Text className={KYC_TYPO.body} color="text-gray-600 dark:text-homepage-softGray">
+                    {declaration.detail}
+                  </Text>
+
+                  {declaration.detailPoints && (
+                    <ul className="mt-2 space-y-1.5">
+                      {declaration.detailPoints.map((point, index) => (
+                        <li key={point} className="flex gap-2">
+                          <Text
+                            as="span"
+                            className={cn(KYC_TYPO.body, 'shrink-0 tabular-nums')}
+                            color="text-brand-500"
+                          >
+                            {index + 1}.
+                          </Text>
+                          <Text
+                            as="span"
+                            className={KYC_TYPO.body}
+                            color="text-gray-600 dark:text-homepage-softGray"
+                          >
+                            {point}
+                          </Text>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               )}
             </li>
           );

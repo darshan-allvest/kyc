@@ -24,10 +24,11 @@ const METHOD = { UPI: 'UPI', BANK: 'BANK' };
  * confirmed.
  */
 export default function PaymentStep() {
-  const { goToStep, updateFlow } = useKycFlow();
+  const { goToStep, updateFlow, paymentMethod, payment } = useKycFlow();
 
-  const [method, setMethod] = useState(METHOD.UPI);
-  const [app, setApp] = useState(null);
+  // Coming back restores the method (and app) already chosen.
+  const [method, setMethod] = useState(paymentMethod ?? METHOD.UPI);
+  const [app, setApp] = useState(payment?.app ?? null);
   const [status, setStatus] = useState('idle'); // idle | paying | paid
   const [error, setError] = useState('');
 

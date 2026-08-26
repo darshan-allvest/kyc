@@ -85,7 +85,7 @@ export default function PanVerificationStep() {
       subtitle="Please provide your basic information to complete KYC."
       showStepper
       currentStep={KYC_STEP.PAN}
-      onBack={() => goToStep(KYC_STEP.MPIN)}
+      onBack={() => goToStep(KYC_STEP.MPIN_VERIFY)}
     >
       <form onSubmit={handleSubmit} noValidate>
         <KycTextField

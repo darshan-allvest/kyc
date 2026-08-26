@@ -17,6 +17,9 @@ const initialState = {
 
   mobileNumber: '',
   otpVerified: false,
+  // Consent ticked on the first screen.
+  termsAccepted: false,
+  entityTermsAccepted: false,
   // Which demo account the journey runs as (see mockKycData MOCK_ACCOUNTS).
   accountId: null,
 
@@ -24,7 +27,11 @@ const initialState = {
   accountVerified: false,
   emailOtpVerified: false,
   passwordSet: false,
-  mpinSet: false, // the MPIN itself is never kept in state
+  mpinSet: false,
+  // Demo only: the MPIN is held in memory so the next screen can verify it.
+  // A real journey would never keep it client-side.
+  mpin: null,
+  mpinVerified: false,
 
   kycCompleted: null, // null = not checked yet
   existingKyc: null,
@@ -55,6 +62,7 @@ const initialState = {
   runningAccountSettlement: null, // '90 days' | '30 days'
   ddpiAccepted: false,
 
+  bankStatement: null, // fetched statement — income proof for F&O
   submittedBankDetails: null, // what the user typed
   bankVerified: false,
 

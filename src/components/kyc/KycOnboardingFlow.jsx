@@ -20,6 +20,7 @@ import EmailStep from '@/components/kyc/steps/EmailStep';
 import EmailOtpStep from '@/components/kyc/steps/EmailOtpStep';
 import SetPasswordStep from '@/components/kyc/steps/SetPasswordStep';
 import MpinStep from '@/components/kyc/steps/MpinStep';
+import MpinVerifyStep from '@/components/kyc/steps/MpinVerifyStep';
 import KycStatusStep from '@/components/kyc/steps/KycStatusStep';
 import DigiLockerStep from '@/components/kyc/steps/DigiLockerStep';
 import PanVerificationStep from '@/components/kyc/steps/PanVerificationStep';
@@ -43,6 +44,7 @@ const STEP_COMPONENTS = {
   [KYC_STEP.EMAIL_OTP]: EmailOtpStep,
   [KYC_STEP.PASSWORD]: SetPasswordStep,
   [KYC_STEP.MPIN]: MpinStep,
+  [KYC_STEP.MPIN_VERIFY]: MpinVerifyStep,
   [KYC_STEP.KYC_STATUS]: KycStatusStep,
   [KYC_STEP.DIGILOCKER]: DigiLockerStep,
   [KYC_STEP.PAN]: PanVerificationStep,

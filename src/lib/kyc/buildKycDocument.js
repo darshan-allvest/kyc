@@ -198,6 +198,19 @@ export function buildKycDocument(flow) {
     });
   }
 
+  if (flow.bankStatement) {
+    sections.push({
+      id: 'income-proof',
+      title: 'Income proof',
+      rows: [
+        ['Document', flow.bankStatement.incomeProof],
+        ['Bank', flow.bankStatement.bankName],
+        ['Period', flow.bankStatement.period],
+        ['Average balance', flow.bankStatement.averageBalance],
+      ],
+    });
+  }
+
   if (payment) {
     sections.push({
       id: 'payment',

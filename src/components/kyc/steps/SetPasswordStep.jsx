@@ -64,7 +64,7 @@ function PasswordField({ id, label, value, error, onChange, autoComplete, autoFo
  * Step 5 — set the account password, once the email is verified.
  */
 export default function SetPasswordStep() {
-  const { goToStep, updateFlow } = useKycFlow();
+  const { goToStep, updateFlow, passwordSet } = useKycFlow();
   const [form, setForm] = useState({ password: '', confirmPassword: '' });
   const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState('');
@@ -77,9 +77,17 @@ export default function SetPasswordStep() {
   };
 
   const allRulesMet = RULES.every((rule) => rule.test(form.password));
+  // A password is never held in state, so coming back offers to keep the one
+  // already set rather than asking for it again.
+  const keepExisting = passwordSet && !form.password && !form.confirmPassword;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    if (keepExisting) {
+      goToStep(KYC_STEP.MPIN);
+      return;
+    }
 
     const errors = {};
     if (!allRulesMet) errors.password = 'Your password does not meet all requirements yet.';
@@ -166,11 +174,17 @@ export default function SetPasswordStep() {
           fullWidth
           weight="bold"
           loading={loading}
-          disabled={!allRulesMet || !form.confirmPassword}
+          disabled={!keepExisting && (!allRulesMet || !form.confirmPassword)}
           className="text-[14px]"
         >
-          {loading ? 'Saving password...' : 'Continue'}
+          {loading ? 'Saving password...' : keepExisting ? 'Keep password & Continue' : 'Continue'}
         </Button>
+
+        {keepExisting && (
+          <Text className={KYC_TYPO.body} color="text-gray-500 dark:text-homepage-darkGrey">
+            Your password is already set. Continue, or type a new one to change it.
+          </Text>
+        )}
       </form>
 
       <KycDemoHint className="mt-5">

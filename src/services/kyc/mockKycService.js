@@ -37,6 +37,7 @@ import {
   resolveAccount,
   mockConsents,
   mockPayment,
+  mockBankStatement,
   mockEsign,
   mockLocation,
   mockFinalDocument,
@@ -198,6 +199,18 @@ export async function verifyAccountWithGoogle({ mobile } = {}) {
     emailOtpVerified: true,
     passwordSet: true,
   });
+}
+
+// ─── Step — verify the MPIN just set ────────────────────────────────────────
+export async function verifyMpin({ mpin, entered } = {}) {
+  await wait(0.6);
+  const digits = (entered || '').replace(/\D/g, '');
+
+  if (digits.length !== MPIN_LENGTH) return fail(`Enter your ${MPIN_LENGTH}-digit MPIN.`);
+  if (!mpin) return fail('Set your MPIN again to continue.', 'MPIN_MISSING');
+  if (digits !== mpin) return fail('Incorrect MPIN. Try again.', 'MPIN_INVALID');
+
+  return ok({ mpinVerified: true });
 }
 
 // ─── Step 7 — KYC status ─────────────────────────────────────────────────────
@@ -456,6 +469,26 @@ export async function verifyBankAccount(
 }
 
 // ─── Step — account opening payment ──────────────────────────────────────────
+// ─── Step — bank statement (income proof for F&O) ────────────────────────────
+export async function fetchBankStatement({ accountNumber, ifsc } = {}, identity) {
+  await wait(1.4);
+  if (!ACCOUNT_NUMBER_REGEX.test(accountNumber || ''))
+    return fail('Enter a valid account number before fetching the statement.');
+  if (!IFSC_REGEX.test(ifsc || ''))
+    return fail('Enter a valid IFSC before fetching the statement.');
+  if (getKycTestConfig().failBankStatement)
+    return fail('We could not fetch your bank statement. Please try again.');
+
+  const account = resolveAccount(identity);
+
+  return ok({
+    ...mockBankStatement,
+    bankName: account.bankDetails?.bankName ?? 'Test Bank',
+    accountNumber,
+    fetchedAt: 'Fetched just now',
+  });
+}
+
 export async function payAccountOpeningFee({ method, app, bank } = {}) {
   await wait(1.6);
   if (getKycTestConfig().failPayment)
@@ -529,11 +562,14 @@ export async function submitSelfie() {
 
 export async function submitSignature({ drawn, uploaded } = {}) {
   await wait(0.8);
-  // Both are mandatory: the drawn signature and the uploaded image of it.
-  if (!drawn) return fail('Draw your signature before submitting.');
-  if (!uploaded?.dataUrl) return fail('Upload an image of your signature as well.');
+  // Either way of signing is accepted, but one of them is required.
+  if (!drawn && !uploaded?.dataUrl)
+    return fail('Sign in the box or upload a picture of your signature.');
 
-  return ok({ signatureCaptured: true, signatureUploaded: true });
+  return ok({
+    signatureCaptured: Boolean(drawn),
+    signatureUploaded: Boolean(uploaded?.dataUrl),
+  });
 }
 
 // ─── Step 15 — final document ────────────────────────────────────────────────
@@ -558,6 +594,7 @@ const mockKycService = {
   verifyEmailOtp,
   setAccountPassword,
   setMpin,
+  verifyMpin,
   verifyAccountWithGoogle,
   getKycStatus,
   fetchExistingKyc,
@@ -571,6 +608,7 @@ const mockKycService = {
   resolvePanDetails,
   fetchGovernmentDetails,
   verifyBankAccount,
+  fetchBankStatement,
   payAccountOpeningFee,
   verifyEsign,
   sendAadhaarOtp,

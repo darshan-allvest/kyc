@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import CommonModal from '@/components/common/CommonModal';
 import Button from '@/components/common/button/Button';
@@ -34,8 +34,20 @@ export default function BankVerificationModal({
   onRetry,
   onContinue,
   onClose,
+  // Income proof — asked for here when F&O is on and the statement was not
+  // already pulled on the payment screen.
+  needsStatement = false,
+  statement = null,
+  fetchingStatement = false,
+  statementError = '',
+  onFetchStatement,
+  onSkipStatement,
 }) {
   const isBusy = state === BANK_MODAL_STATE.VERIFYING;
+  const isVerified =
+    state === BANK_MODAL_STATE.PAID || state === BANK_MODAL_STATE.SUCCESS;
+  // Only ask while the statement is still missing.
+  const askForStatement = isVerified && needsStatement && !statement;
 
   return (
     <CommonModal
@@ -52,7 +64,32 @@ export default function BankVerificationModal({
       }
       maxWidth="max-w-md"
       footer={
-        state === BANK_MODAL_STATE.PAID || state === BANK_MODAL_STATE.SUCCESS ? (
+        askForStatement ? (
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="authSubmit"
+              size="lg"
+              fullWidth
+              weight="bold"
+              leftIcon={FileText}
+              loading={fetchingStatement}
+              className="text-[14px]"
+              onClick={onFetchStatement}
+            >
+              {fetchingStatement ? 'Fetching statement...' : 'Fetch bank statement'}
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              fullWidth
+              weight="semibold"
+              className="text-[14px]"
+              onClick={onSkipStatement}
+            >
+              Skip, do it later
+            </Button>
+          </div>
+        ) : isVerified ? (
           <Button
             variant="authSubmit"
             size="lg"
@@ -153,6 +190,40 @@ export default function BankVerificationModal({
             />
           )}
         </div>
+      )}
+
+      {isVerified && statement && (
+        <KycDetailCard
+          className="mt-4"
+          title="Income proof"
+          badge={
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-500/40 bg-brand-500/10 px-2.5 py-1">
+              <CheckCircle2 className="size-3.5 text-brand-500" aria-hidden="true" />
+              <Text as="span" className={KYC_TYPO.body} color="text-brand-500">
+                Fetched
+              </Text>
+            </span>
+          }
+          items={[
+            { label: 'Document', value: statement.incomeProof },
+            { label: 'Bank', value: statement.bankName },
+            { label: 'Period', value: statement.period },
+            { label: 'Average balance', value: statement.averageBalance },
+          ]}
+        />
+      )}
+
+      {askForStatement && (
+        <Text className={cn(KYC_TYPO.body, 'mt-4')} color="text-homepage-darkGrey">
+          You activated F&amp;O, which needs a bank statement as income proof. Fetch it
+          now from the account above, or skip and add it later from your profile.
+        </Text>
+      )}
+
+      {statementError && (
+        <KycAlert tone="error" className="mt-3">
+          {statementError}
+        </KycAlert>
       )}
 
       {state === BANK_MODAL_STATE.ERROR && <KycAlert tone="error">{error}</KycAlert>}
