@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Button from '@/components/common/button/Button';
 import Checkbox from '@/components/common/Checkbox';
@@ -14,24 +14,26 @@ import {
   KYC_STEP,
   KYC_TYPO,
   MAX_NOMINEES,
+  NOMINEE_ID_DOCUMENTS,
   NOMINEE_OPT_OUT_DECLARATION,
   NOMINEE_RELATIONSHIPS,
+  NOMINEE_STATEMENT_FLAG_VALUES,
   NOMINEE_STATEMENT_OPTIONS,
 } from '@/constants/kycConstants';
 import { saveNominee } from '@/services/kyc/mockKycService';
+import { INDIAN_MOBILE_REGEX, PAN_REGEX, validateEmail } from '@/utils/formValidators';
 import useKycFlow from '@/hooks/kyc/useKycFlow';
 
-const EMPTY_NOMINEE = { name: '', relationship: '', dateOfBirth: '', sharePercentage: '100' };
-
-// Adding or removing a nominee re-splits the shares evenly, with the remainder
-// going to the first nominee so the total always lands on exactly 100.
-const splitEvenly = (nominees) => {
-  const share = Math.floor(100 / nominees.length);
-  const remainder = 100 - share * nominees.length;
-  return nominees.map((nominee, index) => ({
-    ...nominee,
-    sharePercentage: String(index === 0 ? share + remainder : share),
-  }));
+const EMPTY_NOMINEE = {
+  name: '',
+  relationship: '',
+  dateOfBirth: '',
+  sharePercentage: '',
+  // Optional details of nomination (SEBI form, part 3).
+  mobile: '',
+  email: '',
+  idDocument: '',
+  idNumber: '',
 };
 
 /**
@@ -47,6 +49,7 @@ export default function NomineeStep() {
     nomineeOptOut,
     nomineeOptOutAcknowledged,
     nomineeStatementPreferences,
+    nomineeStatementFlag,
   } = useKycFlow();
 
   const [nominees, setNominees] = useState(
@@ -57,13 +60,38 @@ export default function NomineeStep() {
       ? nomineeStatementPreferences
       : [NOMINEE_STATEMENT_OPTIONS[0].id]
   );
+  const [statementFlag, setStatementFlag] = useState(
+    nomineeStatementFlag ?? NOMINEE_STATEMENT_FLAG_VALUES[0]
+  );
   const [skip, setSkip] = useState(Boolean(nomineeOptOut));
   const [optOutAccepted, setOptOutAccepted] = useState(Boolean(nomineeOptOutAcknowledged));
   const [errors, setErrors] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const totalShare = nominees.reduce(
+  // Shares are optional: whatever is left after the entered ones is split
+  // evenly across the nominees that were left blank.
+  const withShares = (() => {
+    const entered = nominees.reduce(
+      (sum, nominee) => sum + Number(nominee.sharePercentage || 0),
+      0
+    );
+    const blanks = nominees.filter((nominee) => !Number(nominee.sharePercentage)).length;
+    if (!blanks) return nominees;
+
+    const remainder = Math.max(0, 100 - entered);
+    const each = Math.floor(remainder / blanks);
+    let extra = remainder - each * blanks;
+
+    return nominees.map((nominee) => {
+      if (Number(nominee.sharePercentage)) return nominee;
+      const bonus = extra > 0 ? 1 : 0;
+      extra -= bonus;
+      return { ...nominee, sharePercentage: String(each + bonus) };
+    });
+  })();
+
+  const totalShare = withShares.reduce(
     (sum, nominee) => sum + Number(nominee.sharePercentage || 0),
     0
   );
@@ -76,7 +104,13 @@ export default function NomineeStep() {
           ? {
               ...nominee,
               [key]:
-                key === 'sharePercentage' ? value.replace(/\D/g, '').slice(0, 3) : value,
+                key === 'sharePercentage'
+                  ? value.replace(/\D/g, '').slice(0, 3)
+                  : key === 'mobile'
+                    ? value.replace(/\D/g, '').slice(0, 10)
+                    : key === 'idNumber'
+                      ? value.toUpperCase()
+                      : value,
             }
           : nominee
       )
@@ -87,13 +121,13 @@ export default function NomineeStep() {
 
   const addNominee = () => {
     if (nominees.length >= MAX_NOMINEES) return;
-    setNominees((prev) => splitEvenly([...prev, { ...EMPTY_NOMINEE }]));
+    setNominees((prev) => [...prev, { ...EMPTY_NOMINEE }]);
     setErrors([]);
     setError('');
   };
 
   const removeNominee = (index) => {
-    setNominees((prev) => splitEvenly(prev.filter((_, i) => i !== index)));
+    setNominees((prev) => prev.filter((_, i) => i !== index));
     setErrors([]);
     setError('');
   };
@@ -104,7 +138,21 @@ export default function NomineeStep() {
       if (!nominee.name.trim()) fieldErrors.name = 'Enter the nominee name.';
       if (!nominee.relationship) fieldErrors.relationship = 'Select the relationship.';
       if (!nominee.dateOfBirth) fieldErrors.dateOfBirth = 'Enter the date of birth.';
-      if (!Number(nominee.sharePercentage)) fieldErrors.sharePercentage = 'Enter a share.';
+
+      // Everything below is optional — checked only when something was entered.
+      if (nominee.mobile && !INDIAN_MOBILE_REGEX.test(nominee.mobile))
+        fieldErrors.mobile = 'Enter a valid 10-digit mobile number.';
+      if (nominee.email && !validateEmail(nominee.email))
+        fieldErrors.email = 'Enter a valid email address.';
+      if (nominee.idNumber && !nominee.idDocument)
+        fieldErrors.idDocument = 'Select which document this number is from.';
+      if (nominee.idDocument && !nominee.idNumber)
+        fieldErrors.idNumber = 'Enter the document number.';
+      if (nominee.idDocument === NOMINEE_ID_DOCUMENTS[0] && nominee.idNumber && !/^\d{4}$/.test(nominee.idNumber))
+        fieldErrors.idNumber = 'Enter the last four digits of the Aadhaar.';
+      if (nominee.idDocument === NOMINEE_ID_DOCUMENTS[1] && nominee.idNumber && !PAN_REGEX.test(nominee.idNumber))
+        fieldErrors.idNumber = 'Enter a valid PAN (e.g. ABCDE1234F).';
+
       return fieldErrors;
     });
     setErrors(next);
@@ -116,6 +164,10 @@ export default function NomineeStep() {
     }
     if (!statementPreferences.length) {
       setError('Tick at least one of the account holding statement options.');
+      return false;
+    }
+    if (statementPreferences.includes('FLAG') && !statementFlag) {
+      setError('Choose Yes or No for whether nomination is given.');
       return false;
     }
     return true;
@@ -130,10 +182,11 @@ export default function NomineeStep() {
 
     setLoading(true);
     const result = await saveNominee({
-      nominees: skip ? [] : nominees,
+      nominees: skip ? [] : withShares,
       optOut: skip,
       optOutAcknowledged: skip ? optOutAccepted : false,
       statementPreferences: skip ? [] : statementPreferences,
+      statementFlag: skip ? null : statementFlag,
     });
     setLoading(false);
 
@@ -147,6 +200,7 @@ export default function NomineeStep() {
       nomineeOptOut: result.data.optOut,
       nomineeOptOutAcknowledged: result.data.optOutAcknowledged,
       nomineeStatementPreferences: result.data.statementPreferences,
+      nomineeStatementFlag: result.data.statementFlag,
     });
     goToStep(KYC_STEP.VERIFICATION);
   };
@@ -220,16 +274,89 @@ export default function NomineeStep() {
                       error={errors[index]?.dateOfBirth}
                       onChange={setField(index, 'dateOfBirth')}
                     />
-                    <KycTextField
-                      label="Share (%)"
-                      inputMode="numeric"
-                      maxLength={3}
-                      required
-                      value={nominee.sharePercentage}
-                      error={errors[index]?.sharePercentage}
-                      onChange={setField(index, 'sharePercentage')}
-                    />
                   </div>
+
+                  {/* Optional details of nomination — collapsed by default */}
+                  <details className="group rounded-lg border border-gray-200 bg-black/10 dark:border-white/10 dark:bg-black/30">
+                    <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
+                      <Text
+                        as="span"
+                        className={cn(KYC_TYPO.label, 'flex-1 font-semibold')}
+                        color="text-gray-700 dark:text-white"
+                      >
+                        Optional details
+                      </Text>
+                      <Text
+                        as="span"
+                        className="text-[11px] font-medium"
+                        color="text-gray-500 dark:text-homepage-darkGrey"
+                      >
+                        share · contact · ID
+                      </Text>
+                      <ChevronDown
+                        className="size-4 shrink-0 text-brand-500 transition-transform group-open:rotate-180"
+                        aria-hidden="true"
+                      />
+                    </summary>
+
+                    <div className="space-y-3 border-t border-gray-200 px-3 py-3 dark:border-white/10">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <KycTextField
+                          label="% Share"
+                          inputMode="numeric"
+                          maxLength={3}
+                          placeholder="Auto"
+                          hint="Blank = equal split"
+                          value={nominee.sharePercentage}
+                          error={errors[index]?.sharePercentage}
+                          onChange={setField(index, 'sharePercentage')}
+                        />
+                        <KycTextField
+                          label="Mobile"
+                          type="tel"
+                          inputMode="numeric"
+                          prefix="+91"
+                          maxLength={10}
+                          autoComplete="off"
+                          placeholder="Optional"
+                          value={nominee.mobile}
+                          error={errors[index]?.mobile}
+                          onChange={setField(index, 'mobile')}
+                        />
+                      </div>
+
+                      <KycTextField
+                        label="Email"
+                        type="email"
+                        autoComplete="off"
+                        placeholder="Optional"
+                        hint="Lets the DP / MF RTA reach your nominee (or their guardian)."
+                        value={nominee.email}
+                        error={errors[index]?.email}
+                        onChange={setField(index, 'email')}
+                      />
+
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <KycSelectField
+                          label="ID document"
+                          options={NOMINEE_ID_DOCUMENTS}
+                          placeholder="Select"
+                          value={nominee.idDocument}
+                          error={errors[index]?.idDocument}
+                          onChange={setField(index, 'idDocument')}
+                        />
+                        <KycTextField
+                          label="Document number"
+                          autoComplete="off"
+                          spellCheck={false}
+                          placeholder="Optional"
+                          value={nominee.idNumber}
+                          error={errors[index]?.idNumber}
+                          onChange={setField(index, 'idNumber')}
+                        />
+                      </div>
+                    </div>
+                  </details>
                 </div>
               </section>
             ))}
@@ -270,23 +397,48 @@ export default function NomineeStep() {
 
               <div className="mt-2 divide-y divide-gray-200 dark:divide-white/5">
                 {NOMINEE_STATEMENT_OPTIONS.map((option) => (
-                  <Checkbox
-                    key={option.id}
-                    id={`nominee-statement-${option.id}`}
-                    checked={statementPreferences.includes(option.id)}
-                    onChange={(checked) => {
-                      setStatementPreferences((prev) =>
-                        checked
-                          ? [...new Set([...prev, option.id])]
-                          : prev.filter((id) => id !== option.id)
-                      );
-                      if (error) setError('');
-                    }}
-                    className="w-full items-start py-2"
-                    boxClassName="mt-0.5"
-                    label={option.label}
-                    labelProps={{ className: KYC_TYPO.body }}
-                  />
+                  <div key={option.id} className="py-2">
+                    <Checkbox
+                      id={`nominee-statement-${option.id}`}
+                      checked={statementPreferences.includes(option.id)}
+                      onChange={(checked) => {
+                        setStatementPreferences((prev) =>
+                          checked
+                            ? [...new Set([...prev, option.id])]
+                            : prev.filter((id) => id !== option.id)
+                        );
+                        if (error) setError('');
+                      }}
+                      className="w-full items-start"
+                      boxClassName="mt-0.5"
+                      label={option.label}
+                      labelProps={{ className: KYC_TYPO.body }}
+                    />
+
+                    {option.id === 'FLAG' && statementPreferences.includes('FLAG') && (
+                      <div className="mt-2 flex items-center gap-2 pl-6">
+                        {NOMINEE_STATEMENT_FLAG_VALUES.map((value) => (
+                          <button
+                            key={value}
+                            type="button"
+                            aria-pressed={statementFlag === value}
+                            onClick={() => {
+                              setStatementFlag(value);
+                              if (error) setError('');
+                            }}
+                            className={cn(
+                              'min-h-11 rounded-full border px-4 text-[12px] font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+                              statementFlag === value
+                                ? 'border-brand-500 bg-brand-500/15 text-brand-500'
+                                : 'border-gray-300 text-gray-600 dark:border-white/20 dark:text-homepage-softGray'
+                            )}
+                          >
+                            {value}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             </section>

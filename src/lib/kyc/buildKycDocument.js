@@ -33,6 +33,7 @@ export function buildKycDocument(flow) {
     nomineeOptOut,
     nomineeOptOutAcknowledged,
     nomineeStatementPreferences,
+    nomineeStatementFlag,
     consents: rawConsents,
     runningAccountSettlement,
   } = flow;
@@ -145,13 +146,22 @@ export function buildKycDocument(flow) {
               ['Relationship', nominee.relationship],
               ['Date of birth', nominee.dateOfBirth],
               ['Share of holdings', `${nominee.sharePercentage}%`],
+              ...(nominee.mobile ? [['Nominee mobile', formatMobile(nominee.mobile)]] : []),
+              ...(nominee.email ? [['Nominee email', maskEmail(nominee.email)]] : []),
+              ...(nominee.idDocument && nominee.idNumber
+                ? [[nominee.idDocument, nominee.idNumber]]
+                : []),
             ]),
             [
               'Printed in holding statements',
               NOMINEE_STATEMENT_OPTIONS.filter((option) =>
                 (nomineeStatementPreferences ?? []).includes(option.id)
               )
-                .map((option) => option.label)
+                .map((option) =>
+                  option.id === 'FLAG' && nomineeStatementFlag
+                    ? `Whether nomination given: ${nomineeStatementFlag}`
+                    : option.label
+                )
                 .join('; ') || 'Not selected',
             ],
           ]

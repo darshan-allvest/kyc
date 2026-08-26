@@ -21,6 +21,7 @@ import {
   ACCOUNT_NUMBER_REGEX,
   MPIN_LENGTH,
   MAX_NOMINEES,
+  NOMINEE_STATEMENT_FLAG_VALUES,
   NOMINEE_STATEMENT_OPTIONS,
   PROFILE_FIELD_KEYS,
   PERMISSION_STATE,
@@ -47,14 +48,6 @@ const wait = async (multiplier = 1) => {
   const { delay: base } = getKycTestConfig();
   await delay(Math.round(base * multiplier));
 };
-
-// 123456 / 654321 and friends — rejected as an MPIN.
-const isSequential = (digits) =>
-  digits
-    .split('')
-    .every((digit, index, all) =>
-      index === 0 ? true : Number(digit) - Number(all[index - 1]) === Number(all[1]) - Number(all[0])
-    ) && Math.abs(Number(digits[1]) - Number(digits[0])) === 1;
 
 // 'auto' → whatever the signed-in demo account has; the other two force it.
 const hasCompletedKyc = (identity) => {
@@ -180,7 +173,6 @@ export async function setMpin({ mpin, confirmMpin } = {}) {
 
   if (digits.length !== MPIN_LENGTH) return fail(`Enter a ${MPIN_LENGTH}-digit MPIN.`);
   if (/^(\d)\1+$/.test(digits)) return fail('Your MPIN cannot be the same digit repeated.');
-  if (isSequential(digits)) return fail('Your MPIN cannot be a sequence like 123456.');
   if (digits !== confirmMpin) return fail('Both MPINs must match.');
   if (getKycTestConfig().failAccount)
     return fail('We could not set your MPIN. Please try again.');
@@ -294,6 +286,7 @@ export async function saveNominee({
   optOut = false,
   optOutAcknowledged = false,
   statementPreferences = [],
+  statementFlag = null,
 }) {
   await wait();
   if (getKycTestConfig().failNominee)
@@ -303,7 +296,13 @@ export async function saveNominee({
     // Opting out is only valid with the Annexure-B declaration accepted.
     if (!optOutAcknowledged)
       return fail('Accept the opt-out declaration to continue without a nominee.');
-    return ok({ nominees: [], optOut: true, optOutAcknowledged: true, statementPreferences: [] });
+    return ok({
+      nominees: [],
+      optOut: true,
+      optOutAcknowledged: true,
+      statementPreferences: [],
+      statementFlag: null,
+    });
   }
 
   if (!nominees.length) return fail('Add a nominee or choose to opt out.');
@@ -315,6 +314,15 @@ export async function saveNominee({
   );
   if (incomplete) return fail('Complete every nominee before continuing.');
 
+  // Optional details are only checked when they were filled in.
+  const badContact = nominees.find(
+    (nominee) =>
+      (nominee.mobile && !INDIAN_MOBILE_REGEX.test(nominee.mobile)) ||
+      (nominee.email && !EMAIL_REGEX.test(nominee.email))
+  );
+  if (badContact)
+    return fail('Check the optional mobile or email you entered for a nominee.');
+
   const total = nominees.reduce((sum, nominee) => sum + Number(nominee.sharePercentage || 0), 0);
   if (total !== 100) return fail(`Nominee shares must add up to 100% (currently ${total}%).`);
 
@@ -324,6 +332,10 @@ export async function saveNominee({
   );
   if (!preferences.length)
     return fail('Choose what should be printed in your account holding statements.');
+  // Printing only the flag needs the answer that goes with it.
+  const flag = preferences.includes('FLAG') ? statementFlag : null;
+  if (preferences.includes('FLAG') && !NOMINEE_STATEMENT_FLAG_VALUES.includes(flag))
+    return fail('Choose Yes or No for whether nomination is given.');
 
   return ok({
     nominees: nominees.map((nominee) => ({
@@ -334,6 +346,7 @@ export async function saveNominee({
     optOut: false,
     optOutAcknowledged: false,
     statementPreferences: preferences,
+    statementFlag: flag,
   });
 }
 
@@ -353,10 +366,10 @@ export async function saveConsent({ accepted = [] }) {
 }
 
 // ─── Step 9 — PAN ────────────────────────────────────────────────────────────
-// The PAN is never typed in this journey: it is fetched against the verified
-// mobile/email (an existing KYC record wins when there is one).
-export async function fetchPanDetails(identity, { existingPan } = {}) {
-  await wait(1.2);
+// The PAN is never typed in this journey: it is resolved against the verified
+// mobile/email (an existing KYC record wins when there is one). Resolution is
+// synchronous — the screen shows the PAN as soon as it opens, with no wait.
+export function resolvePanDetails(identity, { existingPan } = {}) {
   if (getKycTestConfig().failPan)
     return fail('We could not fetch your PAN details right now. Please try again.');
 
@@ -365,7 +378,10 @@ export async function fetchPanDetails(identity, { existingPan } = {}) {
   if (!PAN_REGEX.test(pan))
     return fail('No PAN is linked to these details. Contact support to continue.');
 
-  return ok({ ...account.panDetails, pan, fetched: true });
+  // The card view also shows what is printed on a PAN card itself.
+  const { fathersName, dateOfBirth } = account.personalDetails ?? {};
+
+  return ok({ ...account.panDetails, pan, fathersName, dateOfBirth, fetched: true });
 }
 
 // ─── Step 10 — "fetch details" simulation ────────────────────────────────────
@@ -552,7 +568,7 @@ const mockKycService = {
   updatePersonalDetails,
   saveNominee,
   saveConsent,
-  fetchPanDetails,
+  resolvePanDetails,
   fetchGovernmentDetails,
   verifyBankAccount,
   payAccountOpeningFee,

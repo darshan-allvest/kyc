@@ -50,6 +50,7 @@ const initialState = {
   nomineeOptOut: false,
   nomineeOptOutAcknowledged: false, // SEBI Annexure-B declaration
   nomineeStatementPreferences: [], // NOMINEE_STATEMENT_OPTIONS ids — one or both
+  nomineeStatementFlag: null, // 'Yes' | 'No' — printed when the FLAG option is ticked
   consents: [], // ids from mockConsents
   runningAccountSettlement: null, // '90 days' | '30 days'
   ddpiAccepted: false,

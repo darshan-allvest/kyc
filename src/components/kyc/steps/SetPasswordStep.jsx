@@ -8,8 +8,10 @@ import Text from '@/components/common/Text';
 import PasswordInput from '@/components/common/input/PasswordInput';
 import KycLayout from '@/components/kyc/KycLayout';
 import KycAlert from '@/components/kyc/KycAlert';
+import KycDemoHint from '@/components/kyc/KycDemoHint';
 import { KYC_STEP, KYC_TYPO } from '@/constants/kycConstants';
 import { setAccountPassword } from '@/services/kyc/mockKycService';
+import { DEMO_NEW_PASSWORD } from '@/services/kyc/mockKycData';
 import useKycFlow from '@/hooks/kyc/useKycFlow';
 
 // Mirrors PASSWORD_REGEX in src/utils/formValidators.js, rule by rule, so the
@@ -170,6 +172,11 @@ export default function SetPasswordStep() {
           {loading ? 'Saving password...' : 'Continue'}
         </Button>
       </form>
+
+      <KycDemoHint className="mt-5">
+        Use this password{' '}
+        <span className="font-semibold text-brand-500">{DEMO_NEW_PASSWORD}</span>
+      </KycDemoHint>
     </KycLayout>
   );
 }

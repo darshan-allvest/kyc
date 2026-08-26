@@ -17,6 +17,10 @@ export const MOCK_DIGILOCKER = {
   portalName: 'DigiLocker (simulated)',
 };
 export const DEMO_PASSWORD = 'Test@1234';
+// Suggested on the "set your password" screen — it satisfies every rule.
+export const DEMO_NEW_PASSWORD = 'Qwerty@123';
+// Suggested on the "set your MPIN" screen.
+export const DEMO_MPIN = '123456';
 
 // ─── Account A — existing KYC ────────────────────────────────────────────────
 const accountWithKyc = {

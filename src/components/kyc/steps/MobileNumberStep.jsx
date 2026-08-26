@@ -21,9 +21,9 @@ export default function MobileNumberStep() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [acceptedSebi, setAcceptedSebi] = useState(false);
+  const [acceptedEntities, setAcceptedEntities] = useState(false);
 
-  const consentGiven = acceptedTerms && acceptedSebi;
+  const consentGiven = acceptedTerms && acceptedEntities;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -81,16 +81,16 @@ export default function MobileNumberStep() {
             onChange={setAcceptedTerms}
             className="items-start"
             boxClassName="mt-0.5"
-            label="I accept the Terms & Conditions and the Privacy Policy."
+            label="I accept the Terms & Conditions and the Privacy Policy of Allvest Securities Pvt Ltd."
             labelProps={{ className: 'leading-snug' }}
           />
           <Checkbox
-            id="kyc-accept-sebi"
-            checked={acceptedSebi}
-            onChange={setAcceptedSebi}
+            id="kyc-accept-entities"
+            checked={acceptedEntities}
+            onChange={setAcceptedEntities}
             className="items-start"
             boxClassName="mt-0.5"
-            label="I agree to continue as per SEBI guidelines."
+            label="I accept the Terms & Conditions of Allvest Technology Pvt Ltd."
             labelProps={{ className: 'leading-snug' }}
           />
         </div>

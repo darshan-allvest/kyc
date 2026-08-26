@@ -128,6 +128,17 @@ export const NOMINEE_OPT_OUT_DECLARATION = Object.freeze({
     'I confirm that I have understood the above implications and that my decision to opt out of nomination is voluntary.',
 });
 
+// Optional per-nominee identifier document (SEBI nomination form, part 3d).
+export const NOMINEE_ID_DOCUMENTS = Object.freeze([
+  'Aadhaar (last 4)',
+  'PAN',
+  'Driving Licence',
+  'Passport',
+]);
+
+// When the "whether nomination given" box is ticked, this is what gets printed.
+export const NOMINEE_STATEMENT_FLAG_VALUES = Object.freeze(['Yes', 'No']);
+
 export const NOMINEE_RELATIONSHIPS = Object.freeze([
   'Spouse',
   'Son',

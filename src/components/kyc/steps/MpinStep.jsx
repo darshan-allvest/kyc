@@ -9,6 +9,7 @@ import KycAlert from '@/components/kyc/KycAlert';
 import KycDemoHint from '@/components/kyc/KycDemoHint';
 import { KYC_STEP, KYC_TYPO, MPIN_LENGTH } from '@/constants/kycConstants';
 import { setMpin as saveMpin } from '@/services/kyc/mockKycService';
+import { DEMO_MPIN } from '@/services/kyc/mockKycData';
 import useKycFlow from '@/hooks/kyc/useKycFlow';
 
 /**
@@ -114,7 +115,8 @@ export default function MpinStep() {
       </form>
 
       <KycDemoHint className="mt-4">
-        Any {MPIN_LENGTH} digits work, except repeats (111111) and sequences (123456).
+        Use this MPIN{' '}
+        <span className="font-semibold text-brand-500">{DEMO_MPIN}</span>
       </KycDemoHint>
     </KycLayout>
   );
