@@ -25,7 +25,6 @@ import KycStatusStep from '@/components/kyc/steps/KycStatusStep';
 import DigiLockerStep from '@/components/kyc/steps/DigiLockerStep';
 import PanVerificationStep from '@/components/kyc/steps/PanVerificationStep';
 import GovernmentDataFetchStep from '@/components/kyc/steps/GovernmentDataFetchStep';
-import ProfileDetailsStep from '@/components/kyc/steps/ProfileDetailsStep';
 import ConfirmDetailsStep from '@/components/kyc/steps/ConfirmDetailsStep';
 import PaymentStep from '@/components/kyc/steps/PaymentStep';
 import BankDetailsStep from '@/components/kyc/steps/BankDetailsStep';
@@ -49,7 +48,6 @@ const STEP_COMPONENTS = {
   [KYC_STEP.DIGILOCKER]: DigiLockerStep,
   [KYC_STEP.PAN]: PanVerificationStep,
   [KYC_STEP.GOVERNMENT_FETCH]: GovernmentDataFetchStep,
-  [KYC_STEP.PROFILE_DETAILS]: ProfileDetailsStep,
   [KYC_STEP.CONFIRM_DETAILS]: ConfirmDetailsStep,
   [KYC_STEP.PAYMENT]: PaymentStep,
   [KYC_STEP.BANK_DETAILS]: BankDetailsStep,

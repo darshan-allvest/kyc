@@ -22,7 +22,13 @@ import { validateIndianName } from '@/utils/formValidators';
  * @param {string} pan
  * @param {Function} onSave — (patch) => Promise<{success, error}>
  */
-export default function PersonalDetailsSection({ details, pan, onSave, className }) {
+export default function PersonalDetailsSection({
+  details,
+  pan,
+  onSave,
+  missingCount = 0,
+  className,
+}) {
   const [open, setOpen] = useState(true);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(() =>
@@ -36,15 +42,17 @@ export default function PersonalDetailsSection({ details, pan, onSave, className
 
   if (!details) return null;
 
+  // Fetched identity values are simply hidden when absent; the profile fields
+  // are always listed, so it is obvious which ones still need filling in.
   const rows = [
-    ['Full Name', details.fullName],
-    ['Occupation', details.occupation],
-    ['Marital Status', details.maritalStatus],
-    ["Father's Full Name", details.fathersName],
-    ['Gross Annual Income', details.incomeRange],
-    ['Trading Experience', details.tradingExperience],
-    ['Source Of Wealth', details.sourceOfWealth],
-    ['PAN', maskPan(pan)],
+    ['Full Name', details.fullName, false],
+    ['Occupation', details.occupation, true],
+    ['Marital Status', details.maritalStatus, true],
+    ["Father's Full Name", details.fathersName, false],
+    ['Gross Annual Income', details.incomeRange, true],
+    ['Trading Experience', details.tradingExperience, true],
+    ['Source Of Wealth', details.sourceOfWealth, true],
+    ['PAN', maskPan(pan), false],
   ];
 
   const handleSave = async () => {
@@ -84,6 +92,13 @@ export default function PersonalDetailsSection({ details, pan, onSave, className
         <Heading as="h2" size="sm" font="sora" weight="semibold" className={cn(KYC_TYPO.subtitle, 'flex-1')}>
           Personal Details
         </Heading>
+        {missingCount > 0 && (
+          <span className="shrink-0 rounded-full border border-brandRed-loss/40 bg-brandRed-12 px-2 py-0.5">
+            <Text as="span" className="text-[11px] font-semibold" color="text-brandRed-loss">
+              {missingCount} to add
+            </Text>
+          </span>
+        )}
         <ChevronDown
           className={cn('size-4 shrink-0 transition-transform', open && 'rotate-180')}
           aria-hidden="true"
@@ -111,6 +126,7 @@ export default function PersonalDetailsSection({ details, pan, onSave, className
                   key={field.key}
                   label={field.label}
                   options={field.options}
+                  required
                   value={form[field.key]}
                   onChange={(event) =>
                     setForm((prev) => ({ ...prev, [field.key]: event.target.value }))
@@ -150,7 +166,7 @@ export default function PersonalDetailsSection({ details, pan, onSave, className
             <>
               <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
                 {rows
-                  .filter(([, value]) => value)
+                  .filter(([, value, always]) => value || always)
                   .map(([label, value]) => (
                     <div key={label} className="min-w-0">
                       <dt>
@@ -162,9 +178,13 @@ export default function PersonalDetailsSection({ details, pan, onSave, className
                         <Text
                           as="span"
                           className={cn(KYC_TYPO.subtitle, 'font-medium')}
-                          color="text-gray-900 dark:text-white"
+                          color={
+                            value
+                              ? 'text-gray-900 dark:text-white'
+                              : 'text-brandRed-loss'
+                          }
                         >
-                          {value}
+                          {value || 'Not added yet'}
                         </Text>
                       </dd>
                     </div>
@@ -191,11 +211,21 @@ export default function PersonalDetailsSection({ details, pan, onSave, className
               <div className="mt-3 text-right">
                 <button
                   type="button"
-                  onClick={() => setEditing(true)}
+                  onClick={() => {
+                    setForm(
+                      PROFILE_FIELDS.reduce(
+                        (acc, field) => ({ ...acc, [field.key]: details?.[field.key] ?? '' }),
+                        { fullName: details?.fullName ?? '' }
+                      )
+                    );
+                    setNameError('');
+                    setError('');
+                    setEditing(true);
+                  }}
                   className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-2 text-[12px] font-semibold text-brand-500 transition-colors duration-200 hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                 >
                   <Pencil className="size-3.5" aria-hidden="true" />
-                  Edit Details
+                  {missingCount > 0 ? 'Add missing details' : 'Edit Details'}
                 </button>
               </div>
             </>

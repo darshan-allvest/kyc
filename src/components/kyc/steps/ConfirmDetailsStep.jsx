@@ -12,6 +12,7 @@ import RiskDisclosureModal from '@/components/kyc/RiskDisclosureModal';
 import {
   KYC_STEP,
   KYC_TYPO,
+  PROFILE_FIELDS,
   RUNNING_ACCOUNT_SETTLEMENT,
 } from '@/constants/kycConstants';
 import { updatePersonalDetails } from '@/services/kyc/mockKycService';
@@ -37,7 +38,6 @@ export default function ConfirmDetailsStep() {
   const {
     personalDetails,
     panDetails,
-    kycCompleted,
     goToStep,
     updateFlow,
     declarations,
@@ -58,7 +58,11 @@ export default function ConfirmDetailsStep() {
   const [riskAccepted, setRiskAccepted] = useState(Boolean(riskDisclosureAccepted));
 
   const allRequiredAccepted = REQUIRED_IDS.every((id) => accepted.includes(id));
-  const canConfirm = allRequiredAccepted && segments.length > 0;
+  // The government fetch does not carry these, so they are filled in here
+  // through Edit Details before the application can be confirmed.
+  const missingProfile = PROFILE_FIELDS.filter((field) => !personalDetails?.[field.key]);
+  const canConfirm =
+    allRequiredAccepted && segments.length > 0 && missingProfile.length === 0;
 
   // "Edit Details" only touches the profile fields; identity stays as fetched.
   const handleSaveDetails = async (patch) => {
@@ -170,9 +174,7 @@ export default function ConfirmDetailsStep() {
         showStepper
         currentStep={KYC_STEP.CONFIRM_DETAILS}
         maxWidth="max-w-[34rem]"
-        onBack={() =>
-          goToStep(kycCompleted ? KYC_STEP.GOVERNMENT_FETCH : KYC_STEP.PROFILE_DETAILS)
-        }
+        onBack={() => goToStep(KYC_STEP.GOVERNMENT_FETCH)}
         footer={
           <>
             <Button
@@ -192,9 +194,13 @@ export default function ConfirmDetailsStep() {
                 align="center"
                 color="text-gray-500 dark:text-homepage-darkGrey"
               >
-                {segments.length === 0
-                  ? 'Select at least one segment to activate.'
-                  : 'Accept the required declarations to enable Confirm.'}
+                {missingProfile.length
+                  ? `Add your ${missingProfile
+                      .map((field) => field.label.toLowerCase())
+                      .join(', ')} under Edit Details.`
+                  : segments.length === 0
+                    ? 'Select at least one segment to activate.'
+                    : 'Accept the required declarations to enable Confirm.'}
               </Text>
             )}
           </>
@@ -203,6 +209,7 @@ export default function ConfirmDetailsStep() {
         <PersonalDetailsSection
           details={personalDetails}
           pan={panDetails?.pan}
+          missingCount={missingProfile.length}
           onSave={handleSaveDetails}
         />
 
