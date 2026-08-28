@@ -56,8 +56,7 @@ const initialState = {
   nominees: [], // up to MAX_NOMINEES, shares adding up to 100%
   nomineeOptOut: false,
   nomineeOptOutAcknowledged: false, // SEBI Annexure-B declaration
-  nomineeStatementPreferences: [], // NOMINEE_STATEMENT_OPTIONS ids — one or both
-  nomineeStatementFlag: null, // 'Yes' | 'No' — printed when the FLAG option is ticked
+  nomineeStatementPreference: null, // one NOMINEE_STATEMENT_OPTIONS id
   consents: [], // ids from mockConsents
   runningAccountSettlement: null, // '90 days' | '30 days'
   ddpiAccepted: false,

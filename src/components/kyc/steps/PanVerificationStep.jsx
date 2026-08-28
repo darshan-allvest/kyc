@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Button from '@/components/common/button/Button';
 import KycLayout from '@/components/kyc/KycLayout';
 import KycTextField from '@/components/kyc/KycTextField';
@@ -12,9 +12,9 @@ import { resolvePanDetails } from '@/services/kyc/mockKycService';
 import useKycFlow from '@/hooks/kyc/useKycFlow';
 
 /**
- * Step — PAN. The PAN is resolved from the verified mobile/email (simulated; no
- * PAN service is called) and fills the field read-only the moment the screen
- * opens: there is nothing to type and nothing to wait for.
+ * Step — PAN. The number is prefilled from the verified mobile/email and stays
+ * editable until Continue; from then on the PAN card is shown and the field is
+ * locked. Verification is simulated — no PAN service is called.
  */
 export default function PanVerificationStep() {
   const {
@@ -29,54 +29,52 @@ export default function PanVerificationStep() {
     personalDetails,
   } = useKycFlow();
 
-  // Always resolve: a PAN record already in flow state can come from the
-  // government fetch, which does not carry what the card prints.
-  const [resolved] = useState(() =>
-    resolvePanDetails(
-      { accountId, mobile: mobileNumber, email: account?.email },
-      { existingPan: existingKyc?.pan || panDetails?.pan }
-    )
-  );
+  const identity = { accountId, mobile: mobileNumber, email: account?.email };
 
-  const resolvedDetails = resolved.success ? resolved.data : null;
-  // The card prints what a PAN card prints — fall back to anything already on
-  // file for a field the PAN lookup itself did not carry.
-  const details = resolvedDetails && {
-    ...resolvedDetails,
-    name: resolvedDetails.name || panDetails?.name || personalDetails?.fullName,
+  // Prefill from whatever is already on file, else from the record resolved
+  // against the verified mobile/email; the applicant may correct it.
+  const [pan, setPan] = useState(() => {
+    const onFile = existingKyc?.pan || panDetails?.pan;
+    if (onFile) return onFile.toUpperCase();
+    const resolved = resolvePanDetails(identity);
+    return resolved.success ? resolved.data.pan : '';
+  });
+  // Continue reveals the PAN card below and locks the field; Submit moves on.
+  const [details, setDetails] = useState(null);
+  const [error, setError] = useState('');
+
+  const locked = Boolean(details);
+
+  /** The card prints what a PAN card prints — fill any gap from the profile. */
+  const withCardFields = (record) => ({
+    ...record,
+    name: record.name || panDetails?.name || personalDetails?.fullName,
     fathersName:
-      resolvedDetails.fathersName || panDetails?.fathersName || personalDetails?.fathersName,
+      record.fathersName || panDetails?.fathersName || personalDetails?.fathersName,
     dateOfBirth:
-      resolvedDetails.dateOfBirth || panDetails?.dateOfBirth || personalDetails?.dateOfBirth,
-  };
-  // Continue reveals the PAN card below; Submit then moves the journey on.
-  const [showCard, setShowCard] = useState(false);
-
-  // Record the PAN once, without holding up the render.
-  useEffect(() => {
-    if (!details || panDetails?.dateOfBirth === details.dateOfBirth) return undefined;
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) updateFlow({ panVerified: true, panDetails: details });
-    });
-    return () => {
-      active = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [details?.pan, details?.dateOfBirth, panDetails?.dateOfBirth, updateFlow]);
+      record.dateOfBirth || panDetails?.dateOfBirth || personalDetails?.dateOfBirth,
+  });
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    if (!details) return;
 
-    if (!showCard) {
-      setShowCard(true);
+    if (locked) {
+      // With a record on file the details can be fetched straight away; a new
+      // applicant shares documents through DigiLocker.
+      goToStep(kycCompleted ? KYC_STEP.GOVERNMENT_FETCH : KYC_STEP.DIGILOCKER);
       return;
     }
 
-    // With a record on file the details can be fetched straight away; a new
-    // applicant shares documents through DigiLocker.
-    goToStep(kycCompleted ? KYC_STEP.GOVERNMENT_FETCH : KYC_STEP.DIGILOCKER);
+    const result = resolvePanDetails(identity, { existingPan: pan });
+    if (!result.success) {
+      setError(result.error);
+      return;
+    }
+
+    const record = withCardFields(result.data);
+    setDetails(record);
+    setError('');
+    updateFlow({ panVerified: true, panDetails: record });
   };
 
   return (
@@ -90,26 +88,34 @@ export default function PanVerificationStep() {
       <form onSubmit={handleSubmit} noValidate>
         <KycTextField
           label="PAN number"
-          placeholder="PAN number"
+          placeholder="Enter PAN number"
           autoComplete="off"
           spellCheck={false}
-          readOnly
-          aria-readonly="true"
-          tabIndex={-1}
+          maxLength={10}
           required
-          value={details?.pan ?? ''}
-          hint="Fetched from your verified mobile number and email — no typing needed."
-          className="cursor-default uppercase tracking-[0.15em] focus:border-homepage-borderColor focus:ring-0"
-          onChange={() => {}}
+          readOnly={locked}
+          aria-readonly={locked ? 'true' : undefined}
+          tabIndex={locked ? -1 : undefined}
+          value={pan}
+          error={error}
+          hint={
+            locked
+              ? 'Verified — this cannot be changed now.'
+              : 'Prefilled from your verified mobile number and email. Edit it if it is wrong.'
+          }
+          className={
+            locked
+              ? 'cursor-default uppercase tracking-[0.15em] focus:border-homepage-borderColor focus:ring-0'
+              : 'uppercase tracking-[0.15em]'
+          }
+          onChange={(event) => {
+            if (locked) return;
+            setPan(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10));
+            if (error) setError('');
+          }}
         />
 
-        {!details && (
-          <KycAlert tone="error" className="mt-3">
-            {resolved.error}
-          </KycAlert>
-        )}
-
-        {showCard && details && <KycPanCard details={details} className="mt-5" />}
+        {locked && <KycPanCard details={details} className="mt-5" />}
 
         <Button
           type="submit"
@@ -117,15 +123,28 @@ export default function PanVerificationStep() {
           size="lg"
           fullWidth
           weight="bold"
-          disabled={!details}
+          disabled={!pan}
           className="mt-5 text-[14px]"
         >
-          {showCard ? 'Submit' : 'Continue'}
+          {locked ? 'Submit' : 'Continue'}
         </Button>
+
+        {locked && (
+          <button
+            type="button"
+            onClick={() => {
+              setDetails(null);
+              setError('');
+            }}
+            className="mt-3 inline-flex min-h-11 items-center rounded-full px-2 text-[12px] font-semibold text-brand-500 transition-colors duration-200 hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            Edit PAN
+          </button>
+        )}
       </form>
 
       <KycDemoHint className="mt-5">
-        Simulated fetch — nothing leaves your browser.
+        Simulated verification — nothing leaves your browser.
       </KycDemoHint>
     </KycLayout>
   );

@@ -51,7 +51,7 @@ export default function PersonalDetailsSection({
     ["Father's Full Name", details.fathersName, false],
     ['Gross Annual Income', details.incomeRange, true],
     ['Trading Experience', details.tradingExperience, true],
-    ['Source Of Wealth', details.sourceOfWealth, true],
+    ['Source Of Income', details.sourceOfWealth, true],
     ['PAN', maskPan(pan), false],
   ];
 

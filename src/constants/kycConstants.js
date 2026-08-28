@@ -106,10 +106,7 @@ export const MAX_NOMINEES = 3;
 // statements" — exactly one of these is ticked.
 export const NOMINEE_STATEMENT_OPTIONS = Object.freeze([
   { id: 'NAMES', label: 'Name of the Nominee(s)' },
-  {
-    id: 'FLAG',
-    label: 'Whether nomination given: Yes / No (not name of the nominee)',
-  },
+  { id: 'FLAG', label: 'Whether nomination given (not the name of the nominee)' },
 ]);
 
 // SEBI Annexure-B — the declaration an applicant signs when opting out of
@@ -135,9 +132,6 @@ export const NOMINEE_ID_DOCUMENTS = Object.freeze([
   'Driving Licence',
   'Passport',
 ]);
-
-// When the "whether nomination given" box is ticked, this is what gets printed.
-export const NOMINEE_STATEMENT_FLAG_VALUES = Object.freeze(['Yes', 'No']);
 
 export const NOMINEE_RELATIONSHIPS = Object.freeze([
   'Spouse',
@@ -172,7 +166,7 @@ export const PROFILE_FIELDS = Object.freeze([
   {
     key: 'maritalStatus',
     label: 'Marital Status',
-    options: Object.freeze(['Single', 'Married', 'Divorced', 'Widowed']),
+    options: Object.freeze(['Single', 'Married']),
   },
   {
     key: 'incomeRange',
@@ -187,7 +181,7 @@ export const PROFILE_FIELDS = Object.freeze([
   },
   {
     key: 'sourceOfWealth',
-    label: 'Source Of Wealth',
+    label: 'Source Of Income',
     options: Object.freeze(['Salary', 'Business income', 'Investments', 'Ancestral', 'Gift', 'Other']),
   },
   {

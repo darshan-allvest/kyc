@@ -21,7 +21,6 @@ import {
   ACCOUNT_NUMBER_REGEX,
   MPIN_LENGTH,
   MAX_NOMINEES,
-  NOMINEE_STATEMENT_FLAG_VALUES,
   NOMINEE_STATEMENT_OPTIONS,
   PROFILE_FIELD_KEYS,
   PERMISSION_STATE,
@@ -298,8 +297,7 @@ export async function saveNominee({
   nominees = [],
   optOut = false,
   optOutAcknowledged = false,
-  statementPreferences = [],
-  statementFlag = null,
+  statementPreference = null,
 }) {
   await wait();
   if (getKycTestConfig().failNominee)
@@ -313,8 +311,7 @@ export async function saveNominee({
       nominees: [],
       optOut: true,
       optOutAcknowledged: true,
-      statementPreferences: [],
-      statementFlag: null,
+      statementPreference: null,
     });
   }
 
@@ -339,16 +336,9 @@ export async function saveNominee({
   const total = nominees.reduce((sum, nominee) => sum + Number(nominee.sharePercentage || 0), 0);
   if (total !== 100) return fail(`Nominee shares must add up to 100% (currently ${total}%).`);
 
-  // One or both boxes may be ticked, but not neither.
-  const preferences = statementPreferences.filter((id) =>
-    NOMINEE_STATEMENT_OPTIONS.some((option) => option.id === id)
-  );
-  if (!preferences.length)
+  // Exactly one of the two statement options is recorded.
+  if (!NOMINEE_STATEMENT_OPTIONS.some((option) => option.id === statementPreference))
     return fail('Choose what should be printed in your account holding statements.');
-  // Printing only the flag needs the answer that goes with it.
-  const flag = preferences.includes('FLAG') ? statementFlag : null;
-  if (preferences.includes('FLAG') && !NOMINEE_STATEMENT_FLAG_VALUES.includes(flag))
-    return fail('Choose Yes or No for whether nomination is given.');
 
   return ok({
     nominees: nominees.map((nominee) => ({
@@ -358,8 +348,7 @@ export async function saveNominee({
     })),
     optOut: false,
     optOutAcknowledged: false,
-    statementPreferences: preferences,
-    statementFlag: flag,
+    statementPreference,
   });
 }
 

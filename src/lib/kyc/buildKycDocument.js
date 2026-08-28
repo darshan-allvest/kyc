@@ -32,8 +32,7 @@ export function buildKycDocument(flow) {
     nominees: rawNominees,
     nomineeOptOut,
     nomineeOptOutAcknowledged,
-    nomineeStatementPreferences,
-    nomineeStatementFlag,
+    nomineeStatementPreference,
     consents: rawConsents,
     runningAccountSettlement,
   } = flow;
@@ -62,7 +61,7 @@ export function buildKycDocument(flow) {
         ['Marital status', personalDetails?.maritalStatus || '-'],
         ['Gross annual income', personalDetails?.incomeRange || '-'],
         ['Trading experience', personalDetails?.tradingExperience || '-'],
-        ['Source of wealth', personalDetails?.sourceOfWealth || '-'],
+        ['Source of income', personalDetails?.sourceOfWealth || '-'],
         ['Email', maskEmail(personalDetails?.email || account?.email || '')],
         ['Mobile', formatMobile(personalDetails?.mobile || mobileNumber)],
         [
@@ -154,15 +153,11 @@ export function buildKycDocument(flow) {
             ]),
             [
               'Printed in holding statements',
-              NOMINEE_STATEMENT_OPTIONS.filter((option) =>
-                (nomineeStatementPreferences ?? []).includes(option.id)
-              )
-                .map((option) =>
-                  option.id === 'FLAG' && nomineeStatementFlag
-                    ? `Whether nomination given: ${nomineeStatementFlag}`
-                    : option.label
-                )
-                .join('; ') || 'Not selected',
+              nomineeStatementPreference === 'FLAG'
+                ? 'Whether nomination given: Yes'
+                : NOMINEE_STATEMENT_OPTIONS.find(
+                    (option) => option.id === nomineeStatementPreference
+                  )?.label || 'Not selected',
             ],
           ]
         : [['Nomination', 'Not provided']],

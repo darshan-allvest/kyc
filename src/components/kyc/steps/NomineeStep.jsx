@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, Plus, Trash2, UserPlus, UserX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Button from '@/components/common/button/Button';
 import Checkbox from '@/components/common/Checkbox';
@@ -17,7 +17,6 @@ import {
   NOMINEE_ID_DOCUMENTS,
   NOMINEE_OPT_OUT_DECLARATION,
   NOMINEE_RELATIONSHIPS,
-  NOMINEE_STATEMENT_FLAG_VALUES,
   NOMINEE_STATEMENT_OPTIONS,
 } from '@/constants/kycConstants';
 import { saveNominee } from '@/services/kyc/mockKycService';
@@ -48,20 +47,14 @@ export default function NomineeStep() {
     nominees: savedNominees,
     nomineeOptOut,
     nomineeOptOutAcknowledged,
-    nomineeStatementPreferences,
-    nomineeStatementFlag,
+    nomineeStatementPreference,
   } = useKycFlow();
 
   const [nominees, setNominees] = useState(
     savedNominees?.length ? savedNominees : [EMPTY_NOMINEE]
   );
-  const [statementPreferences, setStatementPreferences] = useState(
-    nomineeStatementPreferences?.length
-      ? nomineeStatementPreferences
-      : [NOMINEE_STATEMENT_OPTIONS[0].id]
-  );
-  const [statementFlag, setStatementFlag] = useState(
-    nomineeStatementFlag ?? NOMINEE_STATEMENT_FLAG_VALUES[0]
+  const [statementPreference, setStatementPreference] = useState(
+    nomineeStatementPreference ?? NOMINEE_STATEMENT_OPTIONS[0].id
   );
   const [skip, setSkip] = useState(Boolean(nomineeOptOut));
   const [optOutAccepted, setOptOutAccepted] = useState(Boolean(nomineeOptOutAcknowledged));
@@ -162,12 +155,8 @@ export default function NomineeStep() {
       setError(`Nominee shares must add up to 100% (currently ${totalShare}%).`);
       return false;
     }
-    if (!statementPreferences.length) {
-      setError('Tick at least one of the account holding statement options.');
-      return false;
-    }
-    if (statementPreferences.includes('FLAG') && !statementFlag) {
-      setError('Choose Yes or No for whether nomination is given.');
+    if (!statementPreference) {
+      setError('Choose what should be printed in your account holding statements.');
       return false;
     }
     return true;
@@ -185,8 +174,7 @@ export default function NomineeStep() {
       nominees: skip ? [] : withShares,
       optOut: skip,
       optOutAcknowledged: skip ? optOutAccepted : false,
-      statementPreferences: skip ? [] : statementPreferences,
-      statementFlag: skip ? null : statementFlag,
+      statementPreference: skip ? null : statementPreference,
     });
     setLoading(false);
 
@@ -199,8 +187,7 @@ export default function NomineeStep() {
       nominees: result.data.nominees,
       nomineeOptOut: result.data.optOut,
       nomineeOptOutAcknowledged: result.data.optOutAcknowledged,
-      nomineeStatementPreferences: result.data.statementPreferences,
-      nomineeStatementFlag: result.data.statementFlag,
+      nomineeStatementPreference: result.data.statementPreference,
     });
     goToStep(KYC_STEP.VERIFICATION);
   };
@@ -212,14 +199,70 @@ export default function NomineeStep() {
 
   return (
     <KycLayout
-      title="Add a nominee"
-      subtitle={`A nominee makes it far easier for your family to claim your holdings. You can add up to ${MAX_NOMINEES}.`}
+      title={skip ? 'Skip nomination' : 'Add a nominee'}
+      subtitle={
+        skip
+          ? 'Read and accept the declaration below to open the account without a nominee.'
+          : `A nominee makes it far easier for your family to claim your holdings. You can add up to ${MAX_NOMINEES}.`
+      }
       showStepper
       currentStep={KYC_STEP.NOMINEE}
       maxWidth="max-w-[30rem]"
       onBack={loading ? undefined : () => goToStep(KYC_STEP.BANK_DETAILS)}
     >
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        {/* Add or skip — chosen up front, not buried under the form */}
+        <fieldset>
+          <legend className="sr-only">Do you want to add a nominee?</legend>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { id: 'add', label: 'Add nominee', icon: UserPlus, skip: false },
+              { id: 'skip', label: 'Skip nominee', icon: UserX, skip: true },
+            ].map((option) => {
+              const Icon = option.icon;
+              const isSelected = skip === option.skip;
+              return (
+                <label
+                  key={option.id}
+                  className={cn(
+                    'flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border px-3 py-2.5 transition-colors',
+                    isSelected
+                      ? 'border-brand-500 bg-brand-500/5 dark:bg-brand-shade'
+                      : 'border-gray-200 dark:border-homepage-borderColor'
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="nomineeChoice"
+                    value={option.id}
+                    checked={isSelected}
+                    onChange={() => {
+                      setSkip(option.skip);
+                      // Choosing to skip is itself the opt-out, so the
+                      // declaration starts accepted; it can still be un-ticked.
+                      setOptOutAccepted(option.skip);
+                      setErrors([]);
+                      setError('');
+                    }}
+                    className="sr-only"
+                  />
+                  <Icon
+                    className={cn('size-4 shrink-0', isSelected ? 'text-brand-500' : 'text-gray-500')}
+                    aria-hidden="true"
+                  />
+                  <Text
+                    as="span"
+                    className={KYC_TYPO.subtitle}
+                    weight={isSelected ? 'semibold' : 'normal'}
+                  >
+                    {option.label}
+                  </Text>
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+
         {!skip && (
           <>
             {nominees.map((nominee, index) => (
@@ -380,7 +423,7 @@ export default function NomineeStep() {
             </div>
 
             <section
-              role="group"
+              role="radiogroup"
               aria-labelledby="nominee-statement-label"
               className="rounded-xl border border-gray-200 p-4 dark:border-white/10 dark:bg-black/20"
             >
@@ -389,73 +432,46 @@ export default function NomineeStep() {
                 className={KYC_TYPO.body}
                 color="text-gray-600 dark:text-homepage-softGray"
               >
-                Print in my account holding statements — tick one or both
+                Print in my account holding statements
                 <span className="ml-0.5 text-brandRed-loss" aria-hidden="true">
                   *
                 </span>
               </Text>
 
-              <div className="mt-2 divide-y divide-gray-200 dark:divide-white/5">
-                {NOMINEE_STATEMENT_OPTIONS.map((option) => (
-                  <div key={option.id} className="py-2">
-                    <Checkbox
-                      id={`nominee-statement-${option.id}`}
-                      checked={statementPreferences.includes(option.id)}
-                      onChange={(checked) => {
-                        setStatementPreferences((prev) =>
-                          checked
-                            ? [...new Set([...prev, option.id])]
-                            : prev.filter((id) => id !== option.id)
-                        );
-                        if (error) setError('');
-                      }}
-                      className="w-full items-start"
-                      boxClassName="mt-0.5"
-                      label={option.label}
-                      labelProps={{ className: KYC_TYPO.body }}
-                    />
-
-                    {option.id === 'FLAG' && (
-                      <div className="mt-2 pl-6">
-                        <span
-                          role="group"
-                          aria-label="Whether nomination is given"
-                          className="inline-flex overflow-hidden rounded-lg border border-gray-300 dark:border-white/15"
-                        >
-                          {NOMINEE_STATEMENT_FLAG_VALUES.map((value, valueIndex) => {
-                            const active =
-                              statementPreferences.includes('FLAG') && statementFlag === value;
-                            return (
-                              <button
-                                key={value}
-                                type="button"
-                                aria-pressed={active}
-                                onClick={() => {
-                                  // Answering also ticks the option it belongs to.
-                                  setStatementPreferences((prev) => [
-                                    ...new Set([...prev, 'FLAG']),
-                                  ]);
-                                  setStatementFlag(value);
-                                  if (error) setError('');
-                                }}
-                                className={cn(
-                                  'min-h-10 px-5 text-[12px] font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500',
-                                  valueIndex > 0 &&
-                                    'border-l border-gray-300 dark:border-white/15',
-                                  active
-                                    ? 'bg-brand-500 text-black'
-                                    : 'text-gray-500 hover:text-gray-800 dark:text-homepage-darkGrey dark:hover:text-white'
-                                )}
-                              >
-                                {value}
-                              </button>
-                            );
-                          })}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                ))}
+              <div className="mt-2 space-y-2">
+                {NOMINEE_STATEMENT_OPTIONS.map((option) => {
+                  const isSelected = statementPreference === option.id;
+                  return (
+                    <label
+                      key={option.id}
+                      className={cn(
+                        'flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 transition-colors',
+                        isSelected
+                          ? 'border-brand-500 bg-brand-500/5 dark:bg-brand-shade'
+                          : 'border-gray-200 dark:border-homepage-borderColor'
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="nomineeStatementPreference"
+                        value={option.id}
+                        checked={isSelected}
+                        onChange={() => {
+                          setStatementPreference(option.id);
+                          if (error) setError('');
+                        }}
+                        className="mt-0.5 size-4 shrink-0 accent-brand-500"
+                      />
+                      <Text
+                        as="span"
+                        className={KYC_TYPO.body}
+                        color="text-gray-700 dark:text-homepage-lightWhite"
+                      >
+                        {option.label}
+                      </Text>
+                    </label>
+                  );
+                })}
               </div>
             </section>
           </>
@@ -542,20 +558,6 @@ export default function NomineeStep() {
         >
           {loading ? 'Saving nomination...' : 'Continue'}
         </Button>
-
-        <Checkbox
-          checked={skip}
-          onChange={(checked) => {
-            setSkip(checked);
-            setOptOutAccepted(false);
-            setErrors([]);
-            setError('');
-          }}
-          className="w-full items-start"
-          boxClassName="mt-0.5"
-          label="Skip nominee"
-          labelProps={{ className: KYC_TYPO.subtitle }}
-        />
       </form>
     </KycLayout>
   );
