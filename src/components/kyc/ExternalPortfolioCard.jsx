@@ -9,13 +9,16 @@ import Heading from '@/components/common/Heading';
 import KycAlert from '@/components/kyc/KycAlert';
 import { KYC_TYPO } from '@/constants/kycConstants';
 
+// The browser calls the CAMS aggregator directly, so both values are public.
+const CAMS_URL = process.env.NEXT_PUBLIC_CAMS_AGGREGATOR_URL;
+const CAMS_TOKEN = process.env.NEXT_PUBLIC_CAMS_API_TOKEN;
+
 /**
  * ExternalPortfolioCard — offered once KYC is complete: pulls the applicant's
  * holdings held elsewhere through the CAMS account aggregator.
  *
- * The redirect URL is fetched from our own /api/external-portfolio route, which
- * holds the CAMS bearer token server-side. This is the one part of the demo
- * that talks to a real service.
+ * This is the one part of the demo that talks to a real service: the consent
+ * URL comes straight from CAMS `/api/v2/redirect/redirectAA`.
  */
 export default function ExternalPortfolioCard({ className }) {
   const [loading, setLoading] = useState(false);
@@ -26,14 +29,39 @@ export default function ExternalPortfolioCard({ className }) {
     setError('');
     setLoading(true);
 
-    try {
-      const response = await fetch('/api/external-portfolio', { cache: 'no-store' });
-      const result = await response.json();
+    if (!CAMS_URL || !CAMS_TOKEN) {
+      setError('NEXT_PUBLIC_CAMS_AGGREGATOR_URL / NEXT_PUBLIC_CAMS_API_TOKEN are not set.');
+      setLoading(false);
+      return;
+    }
 
-      if (!result.success || !result.redirectionUrl) {
-        setError(result.error || 'CAMS did not return a consent link. Please try again.');
+    try {
+      const response = await fetch(`${CAMS_URL}/api/v2/redirect/redirectAA`, {
+        headers: {
+          accept: 'application/json, text/plain, */*',
+          'accept-language': 'en',
+          authorization: `Bearer ${CAMS_TOKEN}`,
+        },
+        cache: 'no-store',
+      });
+
+      const payload = await response.json().catch(() => null);
+      const data = payload?.data ?? payload;
+
+      if (!response.ok || !data?.redirectionurl) {
+        setError(
+          payload?.msg ||
+            payload?.message ||
+            'CAMS did not return a consent link. Please try again.'
+        );
         return;
       }
+
+      const result = {
+        redirectionUrl: data.redirectionurl,
+        consentHandle: data.consentHandle ?? null,
+        clientTxnId: data.clienttxnid ?? null,
+      };
 
       setLink(result);
       // Best-effort auto-open; blocked pop-ups fall back to the manual link.
