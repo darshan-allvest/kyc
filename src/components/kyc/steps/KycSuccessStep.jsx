@@ -6,16 +6,15 @@ import Button from '@/components/common/button/Button';
 import Text from '@/components/common/Text';
 import Heading from '@/components/common/Heading';
 import KycLayout from '@/components/kyc/KycLayout';
-import KycDetailCard from '@/components/kyc/KycDetailCard';
+import ExternalPortfolioCard from '@/components/kyc/ExternalPortfolioCard';
 import { KYC_STEP, KYC_TYPO } from '@/constants/kycConstants';
-import { formatMobile } from '@/lib/kyc/kycFormatters';
 import useKycFlow from '@/hooks/kyc/useKycFlow';
 
 /**
  * Final screen — account setup complete.
  */
 export default function KycSuccessStep() {
-  const { finalDocument, mobileNumber, fnoSelected, aadhaarEsign, resetFlow } = useKycFlow();
+  const { resetFlow } = useKycFlow();
 
   return (
     <KycLayout
@@ -59,19 +58,11 @@ export default function KycSuccessStep() {
         </Text>
       </div>
 
-      <KycDetailCard
-        className="mt-4"
-        items={[
-          { label: 'Registered mobile', value: formatMobile(mobileNumber) },
-          { label: 'Document', value: finalDocument?.documentId || '-' },
-          { label: 'E-Sign reference', value: aadhaarEsign?.reference || '-' },
-          { label: 'Equity & MF', value: 'Activated' },
-          { label: 'Futures & Options', value: fnoSelected ? 'Activated' : 'Not activated' },
-        ]}
-      />
+      <ExternalPortfolioCard className="mt-4" />
 
       <Text className={cn(KYC_TYPO.body, 'mt-4')} align="center" color="text-gray-500 dark:text-homepage-darkGrey">
-        Demo complete — nothing was submitted anywhere.
+        Demo complete — nothing was submitted anywhere, apart from the external
+        portfolio consent you choose to start.
       </Text>
     </KycLayout>
   );
