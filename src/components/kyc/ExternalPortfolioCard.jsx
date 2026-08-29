@@ -35,6 +35,10 @@ export default function ExternalPortfolioCard({ className }) {
       return;
     }
 
+    // Opened synchronously inside the click: a tab opened after the await is
+    // treated as a pop-up and blocked. The CAMS URL lands in it once we have it.
+    const consentWindow = window.open('about:blank', '_blank');
+
     try {
       const response = await fetch(`${CAMS_URL}/api/v2/redirect/redirectAA`, {
         headers: {
@@ -49,6 +53,7 @@ export default function ExternalPortfolioCard({ className }) {
       const data = payload?.data ?? payload;
 
       if (!response.ok || !data?.redirectionurl) {
+        consentWindow?.close();
         setError(
           payload?.msg ||
             payload?.message ||
@@ -64,9 +69,20 @@ export default function ExternalPortfolioCard({ className }) {
       };
 
       setLink(result);
-      // Best-effort auto-open; blocked pop-ups fall back to the manual link.
-      window.open(result.redirectionUrl, '_blank', 'noopener,noreferrer');
+
+      if (consentWindow && !consentWindow.closed) {
+        try {
+          consentWindow.opener = null;
+        } catch {
+          // Some browsers keep `opener` read-only; navigation still works.
+        }
+        consentWindow.location.replace(result.redirectionUrl);
+      } else {
+        // Pop-up was blocked outright; the manual link below covers it.
+        window.open(result.redirectionUrl, '_blank', 'noopener,noreferrer');
+      }
     } catch (fetchError) {
+      consentWindow?.close();
       setError(fetchError?.message || 'Could not reach the aggregator.');
     } finally {
       setLoading(false);
