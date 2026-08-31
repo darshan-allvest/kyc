@@ -99,23 +99,9 @@ export default function PanVerificationStep() {
           value={pan}
           error={error}
           hint={
-            locked ? (
-              <span className="flex items-center justify-between gap-2">
-                <span>Verified — this cannot be changed now.</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDetails(null);
-                    setError('');
-                  }}
-                  className="shrink-0 whitespace-nowrap rounded-full border border-brand-500 bg-transparent px-3 py-1 text-[12px] font-semibold text-brand-500 transition-colors duration-200 hover:bg-brand-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-                >
-                  Edit PAN
-                </button>
-              </span>
-            ) : (
-              'Prefilled from your verified mobile number and email. Edit it if it is wrong.'
-            )
+            locked
+              ? 'Verified — this cannot be changed now.'
+              : 'Prefilled from your verified mobile number and email. Edit it if it is wrong.'
           }
           className={
             locked
@@ -142,8 +128,6 @@ export default function PanVerificationStep() {
         >
           {locked ? 'Submit' : 'Continue'}
         </Button>
-
-
       </form>
 
       <KycDemoHint className="mt-5">
