@@ -12,9 +12,9 @@ import { resolvePanDetails } from '@/services/kyc/mockKycService';
 import useKycFlow from '@/hooks/kyc/useKycFlow';
 
 /**
- * Step — PAN. The number is prefilled from the verified mobile/email and stays
- * editable until Continue; from then on the PAN card is shown and the field is
- * locked. Verification is simulated — no PAN service is called.
+ * Step — PAN. The number is prefilled from the verified mobile/email and is
+ * read-only throughout; Continue reveals the PAN card, Submit moves on.
+ * Verification is simulated — no PAN service is called.
  */
 export default function PanVerificationStep() {
   const {
@@ -32,8 +32,8 @@ export default function PanVerificationStep() {
   const identity = { accountId, mobile: mobileNumber, email: account?.email };
 
   // Prefill from whatever is already on file, else from the record resolved
-  // against the verified mobile/email; the applicant may correct it.
-  const [pan, setPan] = useState(() => {
+  // against the verified mobile/email; the applicant cannot change it.
+  const [pan] = useState(() => {
     const onFile = existingKyc?.pan || panDetails?.pan;
     if (onFile) return onFile.toUpperCase();
     const resolved = resolvePanDetails(identity);
@@ -93,26 +93,13 @@ export default function PanVerificationStep() {
           spellCheck={false}
           maxLength={10}
           required
-          readOnly={locked}
-          aria-readonly={locked ? 'true' : undefined}
-          tabIndex={locked ? -1 : undefined}
+          readOnly
+          aria-readonly="true"
+          tabIndex={-1}
           value={pan}
           error={error}
-          hint={
-            locked
-              ? 'Verified — this cannot be changed now.'
-              : 'Prefilled from your verified mobile number and email. Edit it if it is wrong.'
-          }
-          className={
-            locked
-              ? 'cursor-default uppercase tracking-[0.15em] focus:border-homepage-borderColor focus:ring-0'
-              : 'uppercase tracking-[0.15em]'
-          }
-          onChange={(event) => {
-            if (locked) return;
-            setPan(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10));
-            if (error) setError('');
-          }}
+          hint="Prefilled from your verified mobile number and email — this cannot be changed."
+          className="cursor-default uppercase tracking-[0.15em] focus:border-homepage-borderColor focus:ring-0"
         />
 
         {locked && <KycPanCard details={details} className="mt-5" />}
