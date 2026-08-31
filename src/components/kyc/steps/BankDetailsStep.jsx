@@ -11,7 +11,6 @@ import KycDemoHint from '@/components/kyc/KycDemoHint';
 import BankVerificationModal, {
   BANK_MODAL_STATE,
 } from '@/components/kyc/BankVerificationModal';
-import ConfirmBankModal from '@/components/kyc/ConfirmBankModal';
 import {
   ACCOUNT_NUMBER_REGEX,
   ACCOUNT_TYPES,
@@ -42,7 +41,6 @@ export default function BankDetailsStep() {
     goToStep,
     updateFlow,
     bankDetails,
-    submittedBankDetails,
     paymentMethod,
     segments,
     fnoSelected,
@@ -65,28 +63,18 @@ export default function BankDetailsStep() {
       }
     : EMPTY_FORM;
 
-  // Coming back shows the account that was already submitted.
-  const [form, setForm] = useState(() =>
-    submittedBankDetails?.accountNumber
-      ? {
-          accountNumber: submittedBankDetails.accountNumber,
-          confirmAccountNumber: submittedBankDetails.accountNumber,
-          ifsc: submittedBankDetails.ifsc,
-          accountType: submittedBankDetails.accountType || ACCOUNT_TYPES[0],
-        }
-      : EMPTY_FORM
-  );
+  // The applicant always types the account here — nothing is pre-filled, not the
+  // record on file and not what was submitted on an earlier pass.
+  const [form, setForm] = useState(EMPTY_FORM);
   // Paying by UPI means the payout account is the one already on record, so
   // this screen has nothing to ask: it verifies that account straight away and
-  // only ever shows the modal. The form appears only if that check fails.
+  // only ever shows the verification modal. The form appears only if that check
+  // fails. Bank payments always land on the form.
   const paysFromBank = paymentMethod === 'BANK';
+  // For UPI, always auto-verify — the form is never shown regardless of whether
+  // the user has been through this step before (e.g. navigated back and returned).
   const [skipForm, setSkipForm] = useState(
-    !paysFromBank && Boolean(demoBank) && !submittedBankDetails
-  );
-  // Offer the account on record first; the applicant reuses it or adds another.
-  // Skipped only when they have already been through this screen.
-  const [showBankChoice, setShowBankChoice] = useState(
-    Boolean(demoBank) && !submittedBankDetails && paysFromBank
+    !paysFromBank && Boolean(demoBank)
   );
   const [errors, setErrors] = useState({});
   const [modalState, setModalState] = useState(null);
@@ -119,18 +107,6 @@ export default function BankDetailsStep() {
 
     setStatement(result.data);
     updateFlow({ bankStatement: result.data });
-  };
-
-  const useRecordedBank = () => {
-    setForm(prefilledForm);
-    setErrors({});
-    setShowBankChoice(false);
-  };
-
-  const addNewBank = () => {
-    setForm(EMPTY_FORM);
-    setErrors({});
-    setShowBankChoice(false);
   };
 
   const setField = (key) => (event) => {
@@ -221,6 +197,13 @@ export default function BankDetailsStep() {
   }, [skipForm]);
 
   const handleContinue = () => {
+    // Bank flow: PAID → SUCCESS (payment confirmed → bank verified + fetch statement).
+    // This mirrors the UPI flow where payment confirmation is a separate screen.
+    if (modalState === BANK_MODAL_STATE.PAID) {
+      setModalState(BANK_MODAL_STATE.SUCCESS);
+      return;
+    }
+    // SUCCESS state (UPI path, or bank path after the PAID screen) — save and advance.
     updateFlow({
       submittedBankDetails: verifiedBank,
       bankVerified: true,
@@ -238,20 +221,32 @@ export default function BankDetailsStep() {
     handleContinue();
   };
 
+  // On the UPI path the modal carries the whole story, so the card behind it is
+  // dropped — the branded page stays, only the duplicate copy goes.
+  const modalOwnsScreen = skipForm && Boolean(modalState);
+
   return (
     <>
       <KycLayout
-        title={skipForm ? 'Confirming your bank account' : 'Add your bank details'}
+        title={
+          modalOwnsScreen
+            ? undefined
+            : skipForm
+              ? 'Confirming your bank account'
+              : 'Add your bank details'
+        }
         subtitle={
-          skipForm
-            ? 'We are verifying the account already on your KYC record.'
-            : 'Payouts and refunds are sent to this account.'
+          modalOwnsScreen
+            ? undefined
+            : skipForm
+              ? 'We are verifying the account already on your KYC record.'
+              : 'Payouts and refunds are sent to this account.'
         }
         showStepper
         currentStep={KYC_STEP.BANK_DETAILS}
         onBack={skipForm ? undefined : () => goToStep(KYC_STEP.PAYMENT)}
       >
-        {skipForm ? (
+        {modalOwnsScreen ? null : skipForm ? (
           <div className="flex items-center gap-3 py-6" role="status" aria-live="polite">
             <Spinner className="size-5 text-brand-500" />
             <Text className={KYC_TYPO.subtitle} color="text-gray-700 dark:text-homepage-lightWhite">
@@ -343,28 +338,12 @@ export default function BankDetailsStep() {
           </Button>
         </form>
 
-        {/* A way back to the account on record, once the modal is closed. */}
-        <button
-          type="button"
-          onClick={() => setShowBankChoice(true)}
-          className="mt-3 inline-flex min-h-11 items-center rounded-full px-2 text-[12px] font-semibold text-brand-500 transition-colors duration-200 hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-        >
-          Use the bank account on record
-        </button>
-
         <KycDemoHint className="mt-3">
           {demoBank.accountNumber} · {demoBank.ifsc} — nothing is sent to a bank.
         </KycDemoHint>
           </>
         )}
       </KycLayout>
-
-      <ConfirmBankModal
-        open={showBankChoice}
-        bank={demoBank}
-        onUse={useRecordedBank}
-        onAddNew={addNewBank}
-      />
 
       <BankVerificationModal
         open={Boolean(modalState)}

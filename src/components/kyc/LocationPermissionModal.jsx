@@ -1,8 +1,7 @@
 'use client';
 
 import { MapPin } from 'lucide-react';
-import CommonModal from '@/components/common/CommonModal';
-import Button from '@/components/common/button/Button';
+import KycModal, { KycModalActions } from '@/components/kyc/KycModal';
 import Text from '@/components/common/Text';
 import Spinner from '@/components/ui/Spinner';
 import KycAlert from '@/components/kyc/KycAlert';
@@ -27,50 +26,27 @@ export default function LocationPermissionModal({
     permission === PERMISSION_STATE.DENIED || permission === PERMISSION_STATE.UNAVAILABLE;
 
   return (
-    <CommonModal
+    <KycModal
       open={open}
       onClose={onClose}
       preventClose={loading}
-      hideClose={loading}
+      icon={MapPin}
       title="Enable location access"
-      maxWidth="max-w-md"
+      description="Regulations require us to record where the account is being opened from. Your location is captured once, only for this verification."
       footer={
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button
-            variant="authSubmit"
-            size="lg"
-            fullWidth
-            weight="bold"
-            loading={loading}
-            className="text-[14px]"
-            onClick={onAllow}
-          >
-            {loading ? 'Fetching location...' : blocked ? 'Try again' : 'Allow Location'}
-          </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            fullWidth
-            weight="semibold"
-            className="text-[14px]"
-            onClick={onSkip}
-          >
-            Not Now
-          </Button>
-        </div>
+        <KycModalActions
+          secondary="Not Now"
+          onSecondary={onSkip}
+          primary={
+            loading ? 'Fetching location...' : blocked ? 'Try again' : 'Allow Location'
+          }
+          onPrimary={onAllow}
+          primaryProps={{ loading }}
+        />
       }
     >
-      <span className="mb-3 flex size-10 items-center justify-center rounded-full bg-brand-500/15">
-        <MapPin className="size-5 text-brand-500" aria-hidden="true" />
-      </span>
-
-      <Text className={KYC_TYPO.subtitle} color="text-homepage-lightWhite">
-        Regulations require us to record where the account is being opened from.
-        Your location is captured once, only for this verification.
-      </Text>
-
       {loading && (
-        <div className="mt-4 flex items-center gap-2" role="status" aria-live="polite">
+        <div className="flex items-center gap-2" role="status" aria-live="polite">
           <Spinner className="size-4 text-brand-500" />
           <Text className={KYC_TYPO.body} color="text-homepage-lightWhite">
             Fetching your location...
@@ -78,11 +54,7 @@ export default function LocationPermissionModal({
         </div>
       )}
 
-      {error && (
-        <KycAlert tone="error" className="mt-4">
-          {error}
-        </KycAlert>
-      )}
-    </CommonModal>
+      {error && <KycAlert tone="error">{error}</KycAlert>}
+    </KycModal>
   );
 }

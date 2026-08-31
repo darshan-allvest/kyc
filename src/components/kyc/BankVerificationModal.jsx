@@ -1,9 +1,8 @@
 'use client';
 
-import { CheckCircle2, FileText } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, FileText, Landmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import CommonModal from '@/components/common/CommonModal';
-import Button from '@/components/common/button/Button';
+import KycModal, { KycModalActions } from '@/components/kyc/KycModal';
 import Text from '@/components/common/Text';
 import Spinner from '@/components/ui/Spinner';
 import KycAlert from '@/components/kyc/KycAlert';
@@ -16,6 +15,33 @@ export const BANK_MODAL_STATE = {
   VERIFYING: 'VERIFYING',
   SUCCESS: 'SUCCESS',
   ERROR: 'ERROR',
+};
+
+// Header per state — the shell is the same everywhere, only the accent, title
+// and lead copy change.
+const HEADERS = {
+  [BANK_MODAL_STATE.VERIFYING]: {
+    icon: Landmark,
+    tone: 'brand',
+    title: 'Verifying your bank account',
+    description: '₹1 is being deposited into the account to confirm the details. It is refunded automatically.',
+  },
+  [BANK_MODAL_STATE.PAID]: {
+    icon: CheckCircle2,
+    tone: 'brand',
+    title: 'Payment received',
+  },
+  [BANK_MODAL_STATE.SUCCESS]: {
+    icon: CheckCircle2,
+    tone: 'brand',
+    title: 'Bank account verified',
+    description: 'The account below is confirmed and linked to your application.',
+  },
+  [BANK_MODAL_STATE.ERROR]: {
+    icon: AlertTriangle,
+    tone: 'loss',
+    title: 'Bank verification failed',
+  },
 };
 
 /**
@@ -46,98 +72,50 @@ export default function BankVerificationModal({
   const isBusy = state === BANK_MODAL_STATE.VERIFYING;
   const isVerified =
     state === BANK_MODAL_STATE.PAID || state === BANK_MODAL_STATE.SUCCESS;
-  // Only ask while the statement is still missing.
-  const askForStatement = isVerified && needsStatement && !statement;
+  // Only ask on the SUCCESS (bank-verified) screen — not on the PAID screen.
+  // PAID is a payment confirmation step; SUCCESS is where the account is confirmed.
+  const askForStatement = state === BANK_MODAL_STATE.SUCCESS && needsStatement && !statement;
+  const header = HEADERS[state] ?? HEADERS[BANK_MODAL_STATE.VERIFYING];
+
+  const footer = askForStatement ? (
+    <KycModalActions
+      stacked
+      primary={fetchingStatement ? 'Fetching statement...' : 'Fetch bank statement'}
+      onPrimary={onFetchStatement}
+      primaryProps={{ leftIcon: FileText, loading: fetchingStatement }}
+      secondary="Skip, do it later"
+      onSecondary={onSkipStatement}
+    />
+  ) : isVerified ? (
+    <KycModalActions stacked primary="Continue" onPrimary={onContinue} />
+  ) : state === BANK_MODAL_STATE.ERROR ? (
+    <KycModalActions
+      secondary="Edit details"
+      onSecondary={onClose}
+      primary="Try again"
+      onPrimary={onRetry}
+    />
+  ) : null;
 
   return (
-    <CommonModal
+    <KycModal
       open={open}
       onClose={onClose}
       preventClose={isBusy}
-      hideClose={isBusy}
-      title={
-        state === BANK_MODAL_STATE.PAID
-          ? 'Payment received'
-          : state === BANK_MODAL_STATE.SUCCESS
-            ? 'Bank account verified'
-            : 'Verifying your bank account'
-      }
-      maxWidth="max-w-md"
-      footer={
-        askForStatement ? (
-          <div className="flex flex-col gap-2">
-            <Button
-              variant="authSubmit"
-              size="lg"
-              fullWidth
-              weight="bold"
-              leftIcon={FileText}
-              loading={fetchingStatement}
-              className="text-[14px]"
-              onClick={onFetchStatement}
-            >
-              {fetchingStatement ? 'Fetching statement...' : 'Fetch bank statement'}
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              fullWidth
-              weight="semibold"
-              className="text-[14px]"
-              onClick={onSkipStatement}
-            >
-              Skip, do it later
-            </Button>
-          </div>
-        ) : isVerified ? (
-          <Button
-            variant="authSubmit"
-            size="lg"
-            fullWidth
-            weight="bold"
-            className="text-[14px]"
-            onClick={onContinue}
-          >
-            Continue
-          </Button>
-        ) : state === BANK_MODAL_STATE.ERROR ? (
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button
-              variant="authSubmit"
-              size="lg"
-              fullWidth
-              weight="bold"
-              className="text-[14px]"
-              onClick={onRetry}
-            >
-              Try again
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              fullWidth
-              weight="semibold"
-              className="text-[14px]"
-              onClick={onClose}
-            >
-              Edit details
-            </Button>
-          </div>
-        ) : null
-      }
+      icon={header.icon}
+      tone={header.tone}
+      title={header.title}
+      description={header.description}
+      footer={footer}
     >
       {state === BANK_MODAL_STATE.VERIFYING && (
-        <div className="py-2" role="status" aria-live="polite">
-          <div className="flex items-center gap-3">
+        <div role="status" aria-live="polite">
+          <div className="flex items-center justify-center gap-3">
             <Spinner className="size-5 text-brand-500" />
             <Text className={KYC_TYPO.subtitle} color="text-homepage-lightWhite">
               Verifying bank account...
             </Text>
           </div>
-          <Text className={cn(KYC_TYPO.body, 'mt-2')} color="text-homepage-darkGrey">
-            &#8377;1 is being deposited into the account to confirm the details. It is
-            refunded automatically.
-          </Text>
           {bank && (
             <KycDetailCard
               className="mt-4"
@@ -152,10 +130,7 @@ export default function BankVerificationModal({
       )}
 
       {state === BANK_MODAL_STATE.PAID && (
-        <div className="flex flex-col items-center py-2 text-center">
-          <span className="mb-4 flex size-14 items-center justify-center rounded-full bg-brand-500/15">
-            <CheckCircle2 className="size-7 text-brand-500" aria-hidden="true" />
-          </span>
+        <div className="flex flex-col items-center text-center">
           <Text className={cn(KYC_TYPO.title, 'lining-nums tabular-nums')} color="text-white">
             {payment?.currency ?? '₹'}
             {payment?.amount ?? 1} paid
@@ -170,26 +145,15 @@ export default function BankVerificationModal({
         </div>
       )}
 
-      {state === BANK_MODAL_STATE.SUCCESS && (
-        <div className="py-2">
-          <span className="flex items-center gap-2">
-            <CheckCircle2 className="size-5 text-brand-500" aria-hidden="true" />
-            <Text className={KYC_TYPO.title} color="text-white">
-              Bank account verified successfully
-            </Text>
-          </span>
-          {bank && (
-            <KycDetailCard
-              className="mt-4"
-              items={[
-                { label: 'Bank', value: bank.bankName },
-                { label: 'Account number', value: maskAccountNumber(bank.accountNumber) },
-                { label: 'IFSC', value: bank.ifsc },
-                { label: 'Account type', value: bank.accountType },
-              ]}
-            />
-          )}
-        </div>
+      {state === BANK_MODAL_STATE.SUCCESS && bank && (
+        <KycDetailCard
+          items={[
+            { label: 'Bank', value: bank.bankName },
+            { label: 'Account number', value: maskAccountNumber(bank.accountNumber) },
+            { label: 'IFSC', value: bank.ifsc },
+            { label: 'Account type', value: bank.accountType },
+          ]}
+        />
       )}
 
       {isVerified && statement && (
@@ -227,6 +191,6 @@ export default function BankVerificationModal({
       )}
 
       {state === BANK_MODAL_STATE.ERROR && <KycAlert tone="error">{error}</KycAlert>}
-    </CommonModal>
+    </KycModal>
   );
 }

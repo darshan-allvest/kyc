@@ -123,6 +123,10 @@ export function buildKycDocument(flow) {
           : declaration.text,
         declarations.includes(declaration.id) ? 'Accepted' : 'Declined',
       ]),
+      // The action itself, when one was admitted above.
+      ...(flow.pastActionDetails
+        ? [['SEBI/Exchange action details', flow.pastActionDetails]]
+        : []),
     ],
   });
 

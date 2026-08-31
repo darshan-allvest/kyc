@@ -9,6 +9,8 @@ import PersonalDetailsSection from '@/components/kyc/PersonalDetailsSection';
 import Declaration from '@/components/kyc/Declaration';
 import FnoOfferModal from '@/components/kyc/FnoOfferModal';
 import RiskDisclosureModal from '@/components/kyc/RiskDisclosureModal';
+import PepBlockModal from '@/components/kyc/PepBlockModal';
+import SebiActionModal from '@/components/kyc/SebiActionModal';
 import {
   KYC_STEP,
   KYC_TYPO,
@@ -19,8 +21,10 @@ import { updatePersonalDetails } from '@/services/kyc/mockKycService';
 import {
   TRADING_SEGMENT_DECLARATIONS,
   mockDeclarations,
+  mockPepBlock,
 } from '@/services/kyc/mockKycData';
 import useKycFlow from '@/hooks/kyc/useKycFlow';
+import useKycToast from '@/hooks/kyc/useKycToast';
 
 const REQUIRED_IDS = mockDeclarations.filter((item) => item.required).map((item) => item.id);
 // Every declaration starts ticked — including DDPI — so the applicant reads and
@@ -44,7 +48,10 @@ export default function ConfirmDetailsStep() {
     segments: savedSegments,
     runningAccountSettlement,
     riskDisclosureAccepted,
+    pastActionDetails,
+    resetFlow,
   } = useKycFlow();
+  const { showToast } = useKycToast();
 
   const [accepted, setAccepted] = useState(declarations ?? DEFAULT_ACCEPTED);
   const [segments, setSegments] = useState(savedSegments ?? DEFAULT_SEGMENTS);
@@ -56,8 +63,19 @@ export default function ConfirmDetailsStep() {
   // ticking F&O keeps the applicant here, Confirm carries on to payment.
   const [riskTrigger, setRiskTrigger] = useState(null);
   const [riskAccepted, setRiskAccepted] = useState(Boolean(riskDisclosureAccepted));
+  // Un-ticking "I am not a Politically Exposed Person" declares PEP status,
+  // which cannot be taken online — the modal is the only way forward.
+  const [showPepBlock, setShowPepBlock] = useState(false);
+  // Same shape for past actions, except the admission is allowed: the applicant
+  // types what the action was and the application carries on with it recorded.
+  const [showSebiAction, setShowSebiAction] = useState(false);
+  const [sebiDetails, setSebiDetails] = useState(pastActionDetails ?? '');
 
-  const allRequiredAccepted = REQUIRED_IDS.every((id) => accepted.includes(id));
+  // 'pastActions' is answered either way: ticked (nothing to declare) or
+  // un-ticked with the action disclosed in the modal.
+  const allRequiredAccepted = REQUIRED_IDS.every(
+    (id) => accepted.includes(id) || (id === 'pastActions' && Boolean(sebiDetails))
+  );
   // The government fetch does not carry these, so they are filled in here
   // through Edit Details before the application can be confirmed.
   const missingProfile = PROFILE_FIELDS.filter((field) => !personalDetails?.[field.key]);
@@ -71,8 +89,46 @@ export default function ConfirmDetailsStep() {
     return result;
   };
 
-  const handleToggle = (id, checked) =>
-    setAccepted((prev) => (checked ? [...prev, id] : prev.filter((item) => item !== id)));
+  const handleToggle = (id, checked) => {
+    setAccepted(checked ? [...accepted, id] : accepted.filter((item) => item !== id));
+    if (id === 'pep' && !checked) setShowPepBlock(true);
+    if (id === 'pastActions') {
+      if (checked) setSebiDetails('');
+      else setShowSebiAction(true);
+    }
+  };
+
+  // Close withdraws the admission: the box goes back on and the flow carries on
+  // as a non-PEP application.
+  const dismissPepBlock = () => {
+    setShowPepBlock(false);
+    setAccepted((prev) => (prev.includes('pep') ? prev : [...prev, 'pep']));
+  };
+
+  // Confirm ends the journey: the application is rejected and the applicant is
+  // dropped back on the first screen, told why on the way out.
+  const confirmPepBlock = () => {
+    setShowPepBlock(false);
+    showToast({
+      tone: 'error',
+      title: mockPepBlock.rejectedTitle,
+      message: mockPepBlock.rejectedMessage,
+    });
+    resetFlow();
+  };
+
+  // Close without disclosing withdraws the admission — the box goes back on.
+  const dismissSebiAction = () => {
+    setShowSebiAction(false);
+    if (!sebiDetails) {
+      setAccepted((prev) => (prev.includes('pastActions') ? prev : [...prev, 'pastActions']));
+    }
+  };
+
+  const confirmSebiAction = (details) => {
+    setSebiDetails(details);
+    setShowSebiAction(false);
+  };
 
   const persistWith = (extra = {}) =>
     updateFlow({
@@ -82,6 +138,7 @@ export default function ConfirmDetailsStep() {
       segments,
       runningAccountSettlement: settlement,
       ddpiAccepted: accepted.includes('ddpi'),
+      pastActionDetails: sebiDetails,
       fnoSelected: segments.includes('fno'),
       riskDisclosureAccepted: riskAccepted,
       ...extra,
@@ -229,6 +286,20 @@ export default function ConfirmDetailsStep() {
         onActivate={activateFno}
         onSkip={skipFno}
         onClose={() => setShowFno(false)}
+      />
+
+      <SebiActionModal
+        key={String(showSebiAction)}
+        open={showSebiAction}
+        value={sebiDetails}
+        onConfirm={confirmSebiAction}
+        onClose={dismissSebiAction}
+      />
+
+      <PepBlockModal
+        open={showPepBlock}
+        onConfirm={confirmPepBlock}
+        onClose={dismissPepBlock}
       />
 
       <RiskDisclosureModal

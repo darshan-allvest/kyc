@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import CommonModal from '@/components/common/CommonModal';
-import Button from '@/components/common/button/Button';
+import KycModal, { KycModalActions } from '@/components/kyc/KycModal';
 import Text from '@/components/common/Text';
 import Checkbox from '@/components/common/Checkbox';
 import { KYC_TYPO } from '@/constants/kycConstants';
@@ -27,48 +26,24 @@ export default function RiskDisclosureModal({ open, onAccept, onDecline }) {
   };
 
   return (
-    <CommonModal
+    <KycModal
       open={open}
       onClose={() => close(onDecline)}
+      icon={AlertTriangle}
+      tone="loss"
       title={mockRiskDisclosure.title}
-      maxWidth="max-w-md"
-      cardClassName="!bg-gradient-loss-glow !border-brandRed-loss/30 shadow-inset-loss"
+      description={mockRiskDisclosure.summary}
       footer={
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button
-            variant="authSubmit"
-            size="lg"
-            fullWidth
-            weight="bold"
-            disabled={!acknowledged}
-            // Labels stay on one line so both pills keep the same height.
-            className="whitespace-nowrap text-[14px]"
-            onClick={() => close(onAccept)}
-          >
-            Activate F&amp;O
-          </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            fullWidth
-            weight="semibold"
-            className="whitespace-nowrap text-[14px]"
-            onClick={() => close(onDecline)}
-          >
-            Cancel
-          </Button>
-        </div>
+        <KycModalActions
+          secondary="Cancel"
+          onSecondary={() => close(onDecline)}
+          primary="Activate F&O"
+          onPrimary={() => close(onAccept)}
+          primaryProps={{ disabled: !acknowledged }}
+        />
       }
     >
-      <div className="mb-3 flex size-10 items-center justify-center rounded-full bg-brandRed-loss/15">
-        <AlertTriangle className="size-5 text-brandRed-loss" aria-hidden="true" />
-      </div>
-
-      <Text className={KYC_TYPO.subtitle} color="text-homepage-lightWhite">
-        {mockRiskDisclosure.summary}
-      </Text>
-
-      <ul className="mt-4 space-y-2">
+      <ul className="space-y-2">
         {mockRiskDisclosure.points.map((point) => (
           <li key={point} className="flex items-start gap-2">
             <span
@@ -103,6 +78,6 @@ export default function RiskDisclosureModal({ open, onAccept, onDecline }) {
         label={mockRiskDisclosure.acknowledgement}
         labelProps={{ className: KYC_TYPO.body }}
       />
-    </CommonModal>
+    </KycModal>
   );
 }

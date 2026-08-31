@@ -11,6 +11,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { KycFlowProvider } from '@/contexts/KycFlowContext';
+import { KycToastProvider } from '@/contexts/KycToastContext';
 import { KYC_STEP } from '@/constants/kycConstants';
 import useKycFlow from '@/hooks/kyc/useKycFlow';
 import KycTestPanel from '@/components/kyc/KycTestPanel';
@@ -74,8 +75,10 @@ function KycFlowRouter() {
 
 export default function KycOnboardingFlow() {
   return (
-    <KycFlowProvider>
-      <KycFlowRouter />
-    </KycFlowProvider>
+    <KycToastProvider>
+      <KycFlowProvider>
+        <KycFlowRouter />
+      </KycFlowProvider>
+    </KycToastProvider>
   );
 }

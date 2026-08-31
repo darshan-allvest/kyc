@@ -251,7 +251,21 @@ export const TRADING_SEGMENT_DECLARATIONS = [
 // gate the Confirm button; the rest are authorisations the applicant may
 // decline. `detail` renders in an expandable row where the wording matters.
 export const mockDeclarations = [
+  // Charges lead the block: the applicant sees what the account costs before
+  // working through the statutory declarations below.
   {
+    id: 'tariff',
+    required: true,
+    control: 'tariff',
+    text: 'I have reviewed the tariff structure and consent to the applicable charges.',
+    // Hosted on ImageKit. A blob: URL cannot be hardcoded here: it is a runtime
+    // handle tied to the document that created it, and browsers block top-level
+    // navigation to blob: from another document.
+    tariffUrl: 'https://ik.imagekit.io/bwbg5zxzq5/12c8dc3f-2220-4d40-a01b-4286e12fd20c.pdf',
+  },
+  {
+    // Worded as a negative statement, so un-ticking is the admission: PEP
+    // status cannot be taken online, and un-ticking raises the block modal.
     id: 'pep',
     required: true,
     text: 'I am not a Politically Exposed Person.',
@@ -298,6 +312,7 @@ export const mockDeclarations = [
     text: 'I declare that I am not incapacitated and am capable of operating my account on my own.',
   },
   {
+    // Same shape: un-ticking admits an action and asks for the details.
     id: 'pastActions',
     required: true,
     text: 'I do not have any Past Actions from SEBI/Exchange in last 3 years',
@@ -325,6 +340,31 @@ export const mockRiskDisclosure = {
   },
   acknowledgement:
     'I have read and understood the above-mentioned Risk Disclosure and acknowledge the same.',
+};
+
+// Shown when the applicant un-ticks the past-actions declaration, i.e. admits
+// to a SEBI/Exchange action in the last 3 years. The details they type are the
+// disclosure that lets the application carry on.
+export const mockSebiActionDisclosure = {
+  title: 'Past Actions',
+  message:
+    'Tell us what the SEBI/Exchange action was, so we can record it with your application.',
+  placeholder: 'ENTER SEBI ACTION DETAILS',
+  error: 'Enter the SEBI/Exchange action details to continue.',
+};
+
+// Shown when the applicant declares PEP status by un-ticking the PEP
+// declaration. PEP accounts cannot be opened online, so confirming ends the
+// journey and hands the applicant to a relationship manager.
+export const mockPepBlock = {
+  title: 'Hi',
+  // Shown as a toast on the way back to the first screen.
+  rejectedTitle: 'KYC application rejected',
+  rejectedMessage:
+    'PEP status accounts cannot be opened online. Our relationship manager will connect with you.',
+  message:
+    'Our relationship manager will connect with you to open your account. At present, PEP status accounts cannot be opened online.',
+  note: 'Note: On confirming your journey will be logged out.',
 };
 
 export const mockFnoOffer = {

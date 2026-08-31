@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, ShieldCheck } from 'lucide-react';
+import { ChevronDown, ShieldCheck, Zap } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import Checkbox from '@/components/common/Checkbox';
@@ -80,97 +80,147 @@ export default function Declaration({
 
           return (
             <li key={declaration.id} className="py-2.5">
-              <div className="flex items-start gap-2">
-                <Checkbox
-                  id={`declaration-${declaration.id}`}
-                  checked={isAccepted}
-                  onChange={(checked) => onToggle(declaration.id, checked)}
-                  className="w-full items-start"
-                  boxClassName="mt-0.5"
-                  label={
-                    <span>
-                      {declaration.text}
-                      {declaration.linkLabel && (
-                        <span className="ml-1 text-brand-500 underline">{declaration.linkLabel}</span>
-                      )}
-                      {declaration.required && (
-                        <span className="ml-1 text-brandRed-loss" aria-hidden="true">
-                          *
-                        </span>
-                      )}
-                    </span>
-                  }
-                  labelProps={{ className: KYC_TYPO.body }}
-                />
-
-                {declaration.detail && (
-                  <button
-                    type="button"
-                    onClick={() => setExpanded(isExpanded ? null : declaration.id)}
-                    aria-expanded={isExpanded}
-                    className="shrink-0 rounded-full p-1 text-gray-500 transition-colors duration-200 hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-homepage-softGray dark:hover:text-white"
+              {/* Tariff Structure — special layout with title + banner + checkbox */}
+              {declaration.control === 'tariff' ? (
+                <div>
+                  <Text
+                    className={cn(KYC_TYPO.label, 'mb-2 font-semibold')}
+                    color="text-gray-900 dark:text-white"
                   >
-                    <ChevronDown
-                      className={cn('size-4 transition-transform', isExpanded && 'rotate-180')}
-                      aria-hidden="true"
-                    />
-                    <span className="sr-only">
-                      {isExpanded ? 'Hide details' : 'Show details'} for {declaration.text}
-                    </span>
-                  </button>
-                )}
-              </div>
-
-              {/* Settlement period sits inside the running-account declaration */}
-              {declaration.control === 'settlement' && isAccepted && (
-                <div className="mt-1.5 pl-6">
-                  <label htmlFor="running-account-period" className="sr-only">
-                    Running account settlement period
-                  </label>
-                  <select
-                    id="running-account-period"
-                    value={settlement || RUNNING_ACCOUNT_SETTLEMENT[0]}
-                    onChange={(event) => onSettlementChange(event.target.value)}
-                    className="min-h-11 rounded-lg border border-transparent bg-transparent py-0 pl-0 pr-6 font-inter text-[14px] font-semibold text-brand-500 outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-                  >
-                    {RUNNING_ACCOUNT_SETTLEMENT.map((option) => (
-                      <option key={option} value={option} className="text-black">
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {declaration.detail && isExpanded && (
-                <div className="mt-1.5 pl-6">
-                  <Text className={KYC_TYPO.body} color="text-gray-600 dark:text-homepage-softGray">
-                    {declaration.detail}
+                    Tariff Structure - Broking &amp; Demat
                   </Text>
 
-                  {declaration.detailPoints && (
-                    <ul className="mt-2 space-y-1.5">
-                      {declaration.detailPoints.map((point, index) => (
-                        <li key={point} className="flex gap-2">
-                          <Text
-                            as="span"
-                            className={cn(KYC_TYPO.body, 'shrink-0 tabular-nums')}
-                            color="text-brand-500"
-                          >
-                            {index + 1}.
-                          </Text>
-                          <Text
-                            as="span"
-                            className={KYC_TYPO.body}
-                            color="text-gray-600 dark:text-homepage-softGray"
-                          >
-                            {point}
-                          </Text>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  <a
+                    href={declaration.tariffUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand-500/10 px-4 py-2.5 transition-colors hover:bg-brand-500/20 dark:bg-brand-shade dark:hover:bg-brand-500/20"
+                  >
+                    <Zap className="size-4 shrink-0 text-brand-500" aria-hidden="true" />
+                    <Text as="span" className={cn(KYC_TYPO.body, 'font-medium')}>
+                      Click here to check{' '}
+                      <span className="font-semibold text-brand-500 underline underline-offset-2">
+                        Prices &amp; Charges
+                      </span>
+                    </Text>
+                  </a>
+
+                  <div className="mt-2">
+                    <Checkbox
+                      id={`declaration-${declaration.id}`}
+                      checked={isAccepted}
+                      onChange={(checked) => onToggle(declaration.id, checked)}
+                      className="w-full items-start"
+                      boxClassName="mt-0.5"
+                      label={
+                        <span>
+                          {declaration.text}
+                          {declaration.required && (
+                            <span className="ml-1 text-brandRed-loss" aria-hidden="true">
+                              *
+                            </span>
+                          )}
+                        </span>
+                      }
+                      labelProps={{ className: KYC_TYPO.body }}
+                    />
+                  </div>
                 </div>
+              ) : (
+                <>
+                  <div className="flex items-start gap-2">
+                    <Checkbox
+                      id={`declaration-${declaration.id}`}
+                      checked={isAccepted}
+                      onChange={(checked) => onToggle(declaration.id, checked)}
+                      className="w-full items-start"
+                      boxClassName="mt-0.5"
+                      label={
+                        <span>
+                          {declaration.text}
+                          {declaration.linkLabel && (
+                            <span className="ml-1 text-brand-500 underline">{declaration.linkLabel}</span>
+                          )}
+                          {declaration.required && (
+                            <span className="ml-1 text-brandRed-loss" aria-hidden="true">
+                              *
+                            </span>
+                          )}
+                        </span>
+                      }
+                      labelProps={{ className: KYC_TYPO.body }}
+                    />
+
+                    {declaration.detail && (
+                      <button
+                        type="button"
+                        onClick={() => setExpanded(isExpanded ? null : declaration.id)}
+                        aria-expanded={isExpanded}
+                        className="shrink-0 rounded-full p-1 text-gray-500 transition-colors duration-200 hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-homepage-softGray dark:hover:text-white"
+                      >
+                        <ChevronDown
+                          className={cn('size-4 transition-transform', isExpanded && 'rotate-180')}
+                          aria-hidden="true"
+                        />
+                        <span className="sr-only">
+                          {isExpanded ? 'Hide details' : 'Show details'} for {declaration.text}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Settlement period sits inside the running-account declaration */}
+                  {declaration.control === 'settlement' && isAccepted && (
+                    <div className="mt-1.5 pl-6">
+                      <label htmlFor="running-account-period" className="sr-only">
+                        Running account settlement period
+                      </label>
+                      <select
+                        id="running-account-period"
+                        value={settlement || RUNNING_ACCOUNT_SETTLEMENT[0]}
+                        onChange={(event) => onSettlementChange(event.target.value)}
+                        className="min-h-11 rounded-lg border border-transparent bg-transparent py-0 pl-0 pr-6 font-inter text-[14px] font-semibold text-brand-500 outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                      >
+                        {RUNNING_ACCOUNT_SETTLEMENT.map((option) => (
+                          <option key={option} value={option} className="text-black">
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {declaration.detail && isExpanded && (
+                    <div className="mt-1.5 pl-6">
+                      <Text className={KYC_TYPO.body} color="text-gray-600 dark:text-homepage-softGray">
+                        {declaration.detail}
+                      </Text>
+
+                      {declaration.detailPoints && (
+                        <ul className="mt-2 space-y-1.5">
+                          {declaration.detailPoints.map((point, index) => (
+                            <li key={point} className="flex gap-2">
+                              <Text
+                                as="span"
+                                className={cn(KYC_TYPO.body, 'shrink-0 tabular-nums')}
+                                color="text-brand-500"
+                              >
+                                {index + 1}.
+                              </Text>
+                              <Text
+                                as="span"
+                                className={KYC_TYPO.body}
+                                color="text-gray-600 dark:text-homepage-softGray"
+                              >
+                                {point}
+                              </Text>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </li>
           );

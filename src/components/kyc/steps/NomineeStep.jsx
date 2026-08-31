@@ -208,7 +208,7 @@ export default function NomineeStep() {
       showStepper
       currentStep={KYC_STEP.NOMINEE}
       maxWidth="max-w-[30rem]"
-      onBack={loading ? undefined : () => goToStep(KYC_STEP.BANK_DETAILS)}
+      onBack={loading ? undefined : () => goToStep(KYC_STEP.PAYMENT)}
     >
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         {/* Add or skip — chosen up front, not buried under the form */}

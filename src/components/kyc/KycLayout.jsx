@@ -37,6 +37,8 @@ export default function KycLayout({
   contentClassName,
   children,
 }) {
+  const hasCard = Boolean(title || subtitle || footer || children);
+
   return (
     <div className="flex min-h-[100dvh] items-start bg-white dark:bg-homepage-deepBlack">
       <KycBrandPanel currentStep={currentStep} />
@@ -79,41 +81,45 @@ export default function KycLayout({
               </button>
             )}
 
-            <div
-              className={cn(
-                'rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6',
-                'dark:border-white/10 dark:bg-homepage-cardBgDark dark:shadow-none',
-                contentClassName
-              )}
-            >
-              {(title || subtitle) && (
-                <div className="mb-5">
-                  {title && (
-                    <Heading
-                      as="h1"
-                      size="base"
-                      font="sora"
-                      weight="semibold"
-                      className={cn(KYC_TYPO.title, 'md:text-[16px]')}
-                    >
-                      {title}
-                    </Heading>
-                  )}
-                  {subtitle && (
-                    <Text
-                      className={cn(KYC_TYPO.subtitle, 'mt-1.5')}
-                      color="text-gray-600 dark:text-homepage-softGray"
-                    >
-                      {subtitle}
-                    </Text>
-                  )}
-                </div>
-              )}
+            {/* A screen whose content has moved into a modal passes nothing at
+                all — the branded page stays, without an empty card on it. */}
+            {hasCard && (
+              <div
+                className={cn(
+                  'rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6',
+                  'dark:border-white/10 dark:bg-homepage-cardBgDark dark:shadow-none',
+                  contentClassName
+                )}
+              >
+                {(title || subtitle) && (
+                  <div className="mb-5">
+                    {title && (
+                      <Heading
+                        as="h1"
+                        size="base"
+                        font="sora"
+                        weight="semibold"
+                        className={cn(KYC_TYPO.title, 'md:text-[16px]')}
+                      >
+                        {title}
+                      </Heading>
+                    )}
+                    {subtitle && (
+                      <Text
+                        className={cn(KYC_TYPO.subtitle, 'mt-1.5')}
+                        color="text-gray-600 dark:text-homepage-softGray"
+                      >
+                        {subtitle}
+                      </Text>
+                    )}
+                  </div>
+                )}
 
-              {children}
+                {children}
 
-              {footer && <div className="mt-6">{footer}</div>}
-            </div>
+                {footer && <div className="mt-6">{footer}</div>}
+              </div>
+            )}
 
             {aside}
           </div>

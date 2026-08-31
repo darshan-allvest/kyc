@@ -60,6 +60,9 @@ const initialState = {
   consents: [], // ids from mockConsents
   runningAccountSettlement: null, // '90 days' | '30 days'
   ddpiAccepted: false,
+  // What the SEBI/Exchange action was, when the past-actions declaration is
+  // un-ticked. Empty means nothing to declare.
+  pastActionDetails: '',
 
   bankStatement: null, // fetched statement — income proof for F&O
   submittedBankDetails: null, // what the user typed
