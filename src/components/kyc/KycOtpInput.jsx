@@ -7,9 +7,12 @@ import {
   REGEXP_ONLY_DIGITS,
 } from '@/components/ui/input-otp';
 import { cn } from '@/lib/utils';
+import { OTP_LENGTH } from '@/constants/kycConstants';
 
 /**
- * KycOtpInput — 6 visible digit boxes for the mobile OTP.
+ * KycOtpInput — one visible box per digit, `maxLength` of them. Defaults to the
+ * OTPs we issue ourselves; the Aadhaar e-sign and the DigiLocker PIN pass their
+ * own longer lengths.
  *
  * Built on the app's existing input-otp primitive, so auto-focus, auto-advance,
  * backspace and paste all come for free.
@@ -23,7 +26,7 @@ export default function KycOtpInput({
   value,
   onChange,
   onComplete,
-  maxLength = 6,
+  maxLength = OTP_LENGTH,
   hasError = false,
   disabled = false,
   autoFocus = true,

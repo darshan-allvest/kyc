@@ -12,7 +12,7 @@ import KycAlert from '@/components/kyc/KycAlert';
 import KycDemoHint from '@/components/kyc/KycDemoHint';
 import KycTextField from '@/components/kyc/KycTextField';
 import KycOtpInput from '@/components/kyc/KycOtpInput';
-import { KYC_STEP, KYC_TYPO } from '@/constants/kycConstants';
+import { AADHAAR_OTP_LENGTH, KYC_STEP, KYC_TYPO } from '@/constants/kycConstants';
 import {
   completeKyc,
   sendAadhaarOtp,
@@ -89,7 +89,7 @@ export default function AadhaarEsignStep() {
 
   const subtitles = {
     [STAGE.AADHAAR]: `Your ${mockEsign.documentName} is signed electronically using Aadhaar.`,
-    [STAGE.OTP]: `UIDAI sent a ${MOCK_AADHAAR.otp.length}-digit OTP to the mobile number linked to your Aadhaar.`,
+    [STAGE.OTP]: `UIDAI sent a ${AADHAAR_OTP_LENGTH}-digit OTP to the mobile number linked to your Aadhaar.`,
     [STAGE.SIGNING]: 'Applying your digital signature to the form.',
     [STAGE.SIGNED]: 'Your KYC is complete.',
   };
@@ -172,6 +172,7 @@ export default function AadhaarEsignStep() {
           noValidate
         >
           <KycOtpInput
+            maxLength={AADHAAR_OTP_LENGTH}
             value={otp}
             hasError={Boolean(error)}
             disabled={loading}
@@ -215,7 +216,7 @@ export default function AadhaarEsignStep() {
             fullWidth
             weight="bold"
             loading={loading}
-            disabled={otp.length !== MOCK_AADHAAR.otp.length}
+            disabled={otp.length !== AADHAAR_OTP_LENGTH}
             className="mt-4 text-[14px]"
           >
             {loading ? 'Signing...' : 'Sign document'}

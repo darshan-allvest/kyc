@@ -8,14 +8,13 @@ import KycLayout from '@/components/kyc/KycLayout';
 import KycOtpInput from '@/components/kyc/KycOtpInput';
 import KycAlert from '@/components/kyc/KycAlert';
 import KycDemoHint from '@/components/kyc/KycDemoHint';
-import { KYC_STEP, KYC_TYPO } from '@/constants/kycConstants';
+import { KYC_STEP, KYC_TYPO, OTP_LENGTH } from '@/constants/kycConstants';
 import { maskMobile } from '@/lib/kyc/kycFormatters';
 import { sendOtp, verifyOtp } from '@/services/kyc/mockKycService';
 import { MOCK_OTP } from '@/services/kyc/mockKycData';
 import { useResendTimer } from '@/hooks/kyc/useResendTimer';
 import useKycFlow from '@/hooks/kyc/useKycFlow';
 
-const OTP_LENGTH = 6;
 
 /**
  * Step 2 — OTP verification. The number comes from step 1; it is never
@@ -90,6 +89,7 @@ export default function OtpVerificationStep() {
         noValidate
       >
         <KycOtpInput
+          maxLength={OTP_LENGTH}
           value={otp}
           hasError={Boolean(error)}
           disabled={loading}

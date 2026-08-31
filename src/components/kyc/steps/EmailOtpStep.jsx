@@ -8,13 +8,12 @@ import KycLayout from '@/components/kyc/KycLayout';
 import KycOtpInput from '@/components/kyc/KycOtpInput';
 import KycAlert from '@/components/kyc/KycAlert';
 import KycDemoHint from '@/components/kyc/KycDemoHint';
-import { KYC_STEP, KYC_TYPO } from '@/constants/kycConstants';
+import { KYC_STEP, KYC_TYPO, OTP_LENGTH } from '@/constants/kycConstants';
 import { sendEmailOtp, verifyEmailOtp } from '@/services/kyc/mockKycService';
 import { MOCK_OTP } from '@/services/kyc/mockKycData';
 import { useResendTimer } from '@/hooks/kyc/useResendTimer';
 import useKycFlow from '@/hooks/kyc/useKycFlow';
 
-const OTP_LENGTH = 6;
 
 /**
  * Step 4 — email OTP. The address comes from the email screen; it is never
@@ -95,6 +94,7 @@ export default function EmailOtpStep() {
         noValidate
       >
         <KycOtpInput
+          maxLength={OTP_LENGTH}
           value={otp}
           hasError={Boolean(error)}
           disabled={loading}

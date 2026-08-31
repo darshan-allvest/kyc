@@ -8,19 +8,19 @@
 // Any other valid mobile number behaves like a new user.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const MOCK_OTP = '123456';
+export const MOCK_OTP = '1234';
 
 // The simulated DigiLocker portal: mobile → OTP → 6-digit security PIN.
 export const MOCK_DIGILOCKER = {
-  otp: '123456',
+  otp: '1234',
   pin: '112233',
   portalName: 'DigiLocker (simulated)',
 };
 export const DEMO_PASSWORD = 'Test@1234';
 // Suggested on the "set your password" screen — it satisfies every rule.
 export const DEMO_NEW_PASSWORD = 'Qwerty@123';
-// Suggested on the "set your MPIN" screen.
-export const DEMO_MPIN = '123456';
+// Suggested on the "set your MPIN" screen — MPIN_LENGTH digits.
+export const DEMO_MPIN = '1234';
 
 // ─── Account A — existing KYC ────────────────────────────────────────────────
 const accountWithKyc = {

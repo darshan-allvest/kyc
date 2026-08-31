@@ -248,6 +248,7 @@ export default function DigiLockerStep() {
           noValidate
         >
           <KycOtpInput
+            maxLength={MOCK_DIGILOCKER.otp.length}
             value={otp}
             hasError={Boolean(error)}
             disabled={loading}
