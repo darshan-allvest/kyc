@@ -96,9 +96,10 @@ export const ACCOUNT_NUMBER_REGEX = /^\d{9,18}$/;
 // Login credentials set during onboarding.
 export const MPIN_LENGTH = 4;
 
-// The OTPs we issue ourselves — mobile, email, DigiLocker portal sign-in.
+// The OTPs we issue ourselves — mobile and email.
 export const OTP_LENGTH = 4;
-// UIDAI issues its own OTP for the Aadhaar e-sign and that one is 6 digits.
+// The Aadhaar-linked OTPs — DigiLocker sign-in and the UIDAI e-sign — are
+// 6 digits.
 export const AADHAAR_OTP_LENGTH = 6;
 
 export const ACCOUNT_TYPES = Object.freeze(['Savings', 'Current']);

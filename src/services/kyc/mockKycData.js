@@ -10,9 +10,9 @@
 
 export const MOCK_OTP = '1234';
 
-// The simulated DigiLocker portal: mobile → OTP → 6-digit security PIN.
+// The simulated DigiLocker portal: mobile → 6-digit OTP → 6-digit security PIN.
 export const MOCK_DIGILOCKER = {
-  otp: '1234',
+  otp: '123456',
   pin: '112233',
   portalName: 'DigiLocker (simulated)',
 };
