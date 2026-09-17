@@ -199,6 +199,25 @@ export const PROFILE_FIELDS = Object.freeze([
 
 export const PROFILE_FIELD_KEYS = Object.freeze(PROFILE_FIELDS.map((field) => field.key));
 
+// Address comes back from the government fetch, but an applicant may correct
+// it on the Confirm Details screen — these are the fields Edit Details shows.
+export const ADDRESS_FIELDS = Object.freeze([
+  { key: 'address', label: 'Address', placeholder: 'House / street / area', autoComplete: 'street-address' },
+  { key: 'city', label: 'City', placeholder: 'City', autoComplete: 'address-level2' },
+  { key: 'state', label: 'State', placeholder: 'State', autoComplete: 'address-level1' },
+  {
+    key: 'pincode',
+    label: 'Pincode',
+    placeholder: '6-digit pincode',
+    autoComplete: 'postal-code',
+    inputMode: 'numeric',
+    maxLength: 6,
+  },
+]);
+
+export const ADDRESS_FIELD_KEYS = Object.freeze(ADDRESS_FIELDS.map((field) => field.key));
+
+
 // ─── Declarations (Step: Verify Details) ─────────────────────────────────────
 // Running-account settlement periods a broker may offer.
 export const RUNNING_ACCOUNT_SETTLEMENT = Object.freeze(['90 days', '30 days', 'Daily']);

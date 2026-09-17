@@ -9,14 +9,39 @@ import Heading from '@/components/common/Heading';
 import KycSelectField from '@/components/kyc/KycSelectField';
 import KycTextField from '@/components/kyc/KycTextField';
 import KycAlert from '@/components/kyc/KycAlert';
-import { KYC_TYPO, PROFILE_FIELDS } from '@/constants/kycConstants';
+import { ADDRESS_FIELDS, KYC_TYPO, PROFILE_FIELDS } from '@/constants/kycConstants';
 import { maskPan } from '@/lib/kyc/kycFormatters';
 import { validateIndianName } from '@/utils/formValidators';
+
+const PINCODE_REGEX = /^[1-9]\d{5}$/;
+
+/** The edit form carries the name, the profile selects and the address. */
+const buildForm = (details) => ({
+  fullName: details?.fullName ?? '',
+  ...PROFILE_FIELDS.reduce((acc, field) => ({ ...acc, [field.key]: details?.[field.key] ?? '' }), {}),
+  ...ADDRESS_FIELDS.reduce((acc, field) => ({ ...acc, [field.key]: details?.[field.key] ?? '' }), {}),
+});
+
+/** Returns a map of field key → message; empty when the form is valid. */
+const validateForm = (form) => {
+  const errors = {};
+  const name = form.fullName.trim();
+  if (!name || !validateIndianName(name)) errors.fullName = 'Enter your name as it appears on your PAN.';
+
+  ADDRESS_FIELDS.forEach((field) => {
+    const value = (form[field.key] ?? '').trim();
+    if (!value) errors[field.key] = `Enter your ${field.label.toLowerCase()}.`;
+  });
+  if (!errors.pincode && !PINCODE_REGEX.test(form.pincode.trim()))
+    errors.pincode = 'Enter a valid 6-digit pincode.';
+
+  return errors;
+};
 
 /**
  * PersonalDetailsSection — the collapsible "Personal Details" block on the
  * Confirm Details screen: fetched values in two columns, with Edit Details for
- * the profile fields an applicant is allowed to correct.
+ * the name, profile fields and address an applicant is allowed to correct.
  *
  * @param {object} details — fetched personal details
  * @param {string} pan
@@ -31,12 +56,8 @@ export default function PersonalDetailsSection({
 }) {
   const [open, setOpen] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState(() =>
-    PROFILE_FIELDS.reduce((acc, field) => ({ ...acc, [field.key]: details?.[field.key] ?? '' }), {
-      fullName: details?.fullName ?? '',
-    })
-  );
-  const [nameError, setNameError] = useState('');
+  const [form, setForm] = useState(() => buildForm(details));
+  const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -55,17 +76,30 @@ export default function PersonalDetailsSection({
     ['PAN', maskPan(pan), false],
   ];
 
+  /** Clears a field's error as soon as it is typed into. */
+  const setField = (key, value) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setFieldErrors((prev) => (prev[key] ? { ...prev, [key]: '' } : prev));
+  };
+
   const handleSave = async () => {
-    const name = form.fullName.trim();
-    if (!name || !validateIndianName(name)) {
-      setNameError('Enter your name as it appears on your PAN.');
+    const errors = validateForm(form);
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
-    setNameError('');
+    const trimmed = Object.fromEntries(
+      Object.entries(form).map(([key, value]) => [
+        key,
+        typeof value === 'string' ? value.trim() : value,
+      ])
+    );
+
+    setFieldErrors({});
     setSaving(true);
     setError('');
-    const result = await onSave({ ...form, fullName: name });
+    const result = await onSave(trimmed);
     setSaving(false);
 
     if (!result?.success) {
@@ -114,11 +148,8 @@ export default function PersonalDetailsSection({
                 autoComplete="name"
                 required
                 value={form.fullName}
-                error={nameError}
-                onChange={(event) => {
-                  setForm((prev) => ({ ...prev, fullName: event.target.value }));
-                  if (nameError) setNameError('');
-                }}
+                error={fieldErrors.fullName}
+                onChange={(event) => setField('fullName', event.target.value)}
               />
 
               {PROFILE_FIELDS.map((field) => (
@@ -128,8 +159,28 @@ export default function PersonalDetailsSection({
                   options={field.options}
                   required
                   value={form[field.key]}
+                  onChange={(event) => setField(field.key, event.target.value)}
+                />
+              ))}
+
+              {ADDRESS_FIELDS.map((field) => (
+                <KycTextField
+                  key={field.key}
+                  label={field.label}
+                  placeholder={field.placeholder}
+                  autoComplete={field.autoComplete}
+                  inputMode={field.inputMode}
+                  maxLength={field.maxLength}
+                  required
+                  value={form[field.key]}
+                  error={fieldErrors[field.key]}
                   onChange={(event) =>
-                    setForm((prev) => ({ ...prev, [field.key]: event.target.value }))
+                    setField(
+                      field.key,
+                      field.key === 'pincode'
+                        ? event.target.value.replace(/\D/g, '')
+                        : event.target.value
+                    )
                   }
                 />
               ))}
@@ -155,7 +206,7 @@ export default function PersonalDetailsSection({
                   onClick={() => {
                     setEditing(false);
                     setError('');
-                    setNameError('');
+                    setFieldErrors({});
                   }}
                 >
                   Cancel
@@ -212,13 +263,8 @@ export default function PersonalDetailsSection({
                 <button
                   type="button"
                   onClick={() => {
-                    setForm(
-                      PROFILE_FIELDS.reduce(
-                        (acc, field) => ({ ...acc, [field.key]: details?.[field.key] ?? '' }),
-                        { fullName: details?.fullName ?? '' }
-                      )
-                    );
-                    setNameError('');
+                    setForm(buildForm(details));
+                    setFieldErrors({});
                     setError('');
                     setEditing(true);
                   }}
